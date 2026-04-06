@@ -30,6 +30,7 @@ import { getDateFormatted, getExtension, sanitizeFileName } from "../utils";
 import { NodeType, fromMediaType } from "../models/nodeType";
 
 import { ViewMode } from "../models/viewMode";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 @Component({
   selector: "app-channel-tile",
@@ -433,6 +434,16 @@ export class ChannelTileComponent implements OnDestroy, AfterViewInit {
         this.clearDownloadGradient();
       }),
     );
+  }
+
+  async copyURL() {
+    try {
+      await writeText(this.channel?.url ?? "");
+      this.error.success("Copied channel URL");
+    }
+    catch (e) {
+      this.error.handleError(e);
+    }
   }
 
   ngOnDestroy() {
