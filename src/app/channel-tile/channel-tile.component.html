@@ -1,5 +1,5 @@
-<div id="tile-{{ id }}" placement="top" tabindex="0" (keyup.enter)="click()" [ngClass]="{ 
-    playing: starting, 
+<div id="tile-{{ id }}" placement="top" tabindex="0" (keyup.enter)="click()" [ngClass]="{
+    playing: starting,
     faded: fade
 }" [ngbTooltip]="channel?.name" triggers="hover" (click)="click()" class="channel d-inline-flex p-2 align-items-center"
   (contextmenu)="onRightClick($event)">
@@ -57,6 +57,9 @@
     <button [hidden]="!isLivestream()" mat-menu-item (click)="openRestreamModal()">
       Re-stream
     </button>
+    <button mat-menu-item
+      [hidden]="channel?.media_type == mediaTypeEnum.group || channel?.media_type == mediaTypeEnum.season"
+      (click)="copyURL()">Copy URL</button>
     <button [hidden]="!isCustom()" mat-menu-item (click)="delete()">Delete</button>
   </ng-template>
 </mat-menu>
