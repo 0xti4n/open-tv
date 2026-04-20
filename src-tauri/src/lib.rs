@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use anyhow::Context;
 use anyhow::Error;
@@ -113,6 +115,7 @@ pub fn run() {
             hide_channel,
             hide_group,
             remove_from_history,
+            get_all_expiries
         ])
         .setup(|app| {
             app.manage(Mutex::new(AppState {
@@ -560,4 +563,9 @@ async fn cancel_play(
     mpv::cancel_play(source_id, channel_id.to_string(), state)
         .await
         .map_err(map_err_frontend)
+}
+
+#[tauri::command]
+async fn get_all_expiries() -> Result<HashMap<i64, i64>, String> {
+    xtream::get_all_expiries().await.map_err(map_err_frontend)
 }

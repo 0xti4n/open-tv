@@ -32,6 +32,7 @@ export class SettingsComponent {
   };
   viewModeEnum = ViewMode;
   sources: Source[] = [];
+  expiries: Record<number, number> = {};
   sortTypes = SORT_TYPES;
   @ViewChild("mpvParams") mpvParams!: ElementRef;
 
@@ -40,7 +41,7 @@ export class SettingsComponent {
     public memory: MemoryService,
     private nav: Router,
     private modal: NgbModal,
-  ) {}
+  ) { }
 
   _getSortTypeText(sortType: SortType) {
     return getSortTypeText(sortType);
@@ -74,6 +75,8 @@ export class SettingsComponent {
   ngOnInit(): void {
     this.getSettings();
     this.getSources();
+    if (this.memory.XtreamSourceIds.size > 0)
+      this.getExpiries();
   }
 
   getSettings() {
@@ -99,6 +102,12 @@ export class SettingsComponent {
         this.memory.AddingAdditionalSource = false;
         this.nav.navigateByUrl("setup");
       }
+    });
+  }
+
+  getExpiries() {
+    invoke("get_all_expiries").then(expiries => {
+      this.expiries = expiries as Record<number, number>;
     });
   }
 

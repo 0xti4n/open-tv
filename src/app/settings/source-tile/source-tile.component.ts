@@ -19,6 +19,8 @@ import { sanitizeFileName } from "../../utils";
 export class SourceTileComponent {
   @Input("source")
   source?: Source;
+  @Input("expiry")
+  expiry?: number;
   showUsername = false;
   showPassword = false;
   loading = false;
@@ -30,7 +32,7 @@ export class SourceTileComponent {
   constructor(
     public memory: MemoryService,
     private modal: NgbModal,
-  ) {}
+  ) { }
 
   get_source_type_name() {
     if (!this.source) return null;
