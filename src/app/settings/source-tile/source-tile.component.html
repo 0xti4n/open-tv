@@ -105,6 +105,12 @@
             <input class="form-control form-control-sm" name="password" [(ngModel)]="editableSource.password">
         </div>
     </div>
+    <div class="row align-items-baseline mt-2" *ngIf="source?.source_type == 2 && !editing">
+        <div class="col-3">Expires:</div>
+        <div class="col">
+            <div class="field selectable">{{expiry ? (expiry! * 1000 | timeUntil) : null}}</div>
+        </div>
+    </div>
     <div class="row mt-2"
         *ngIf="editing && (source?.source_type == sourceTypeEnum.M3U || source?.source_type == sourceTypeEnum.M3ULink)">
         <div class="col">

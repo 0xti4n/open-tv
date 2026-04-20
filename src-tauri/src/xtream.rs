@@ -1,5 +1,6 @@
 use crate::log;
 use crate::media_type;
+use crate::source_type;
 use crate::sql;
 use crate::sql::insert_season;
 use crate::types::Channel;
@@ -7,6 +8,7 @@ use crate::types::ChannelPreserve;
 use crate::types::EPG;
 use crate::types::Season;
 use crate::types::Source;
+use crate::types::XtreamStatus;
 use crate::utils::get_local_time;
 use crate::utils::get_user_agent_from_source;
 use anyhow::anyhow;
@@ -16,6 +18,7 @@ use base64::prelude::BASE64_STANDARD;
 use chrono::DateTime;
 use chrono::Local;
 use chrono::NaiveDateTime;
+use futures::future::join_all;
 use reqwest::Client;
 use rusqlite::Transaction;
 use serde::Deserialize;
@@ -587,4 +590,28 @@ fn get_timeshift_url(mut url: Url, start: String, end: String, stream_id: &str) 
         .append_pair("start", &start)
         .append_pair("duration", &duration);
     Ok(url.to_string())
+}
+
+async fn get_status(source: &mut Source) -> Result<(i64, XtreamStatus)> {
+    let url = build_xtream_url(source)?;
+    let user_agent = get_user_agent_from_source(&source)?;
+    let client = Client::builder().user_agent(user_agent).build()?;
+    let data = client.get(url).send().await?.json::<XtreamStatus>().await?;
+    Ok((source.id.context("no id")?, data))
+}
+
+pub async fn get_all_expiries() -> Result<HashMap<i64, i64>> {
+    let mut sources = sql::get_sources_by_type(source_type::XTREAM)?;
+    let to_await = sources.iter_mut().map(|source| get_status(source));
+    let results: Vec<std::result::Result<(i64, XtreamStatus), anyhow::Error>> =
+        join_all(to_await).await;
+    let statuses: HashMap<i64, i64> = results
+        .into_iter()
+        .flatten()
+        .filter_map(|(id, status)| {
+            let exp_date = get_serde_json_i64(&status.user_info.exp_date)?;
+            Some((id, exp_date))
+        })
+        .collect();
+    Ok(statuses)
 }

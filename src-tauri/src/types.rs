@@ -69,6 +69,16 @@ pub struct Source {
 }
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
+pub struct XtreamStatus {
+    pub user_info: XtreamStatusUserInfo,
+}
+
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
+pub struct XtreamStatusUserInfo {
+    pub exp_date: serde_json::Value,
+}
+
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Settings {
     pub recording_path: Option<String>,
     pub mpv_params: Option<String>,

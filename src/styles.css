@@ -32,7 +32,7 @@ body {
 }
 
 .selectable {
-  user-select: auto;
+  user-select: text;
 }
 
 p {
@@ -53,6 +53,7 @@ body {
   height: fit-content;
   user-select: none;
 }
+
 body {
   margin: 0;
   font-family: "Roboto", sans-serif;
