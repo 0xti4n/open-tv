@@ -21,9 +21,7 @@ export class TimeUntilPipe implements PipeTransform {
             'month': 2592000,
             'week': 604800,
             'day': 86400,
-            'hour': 3600,
-            'minute': 60,
-            'second': 1
+            'hour': 3600
         };
 
         let counter;
@@ -41,6 +39,9 @@ export class TimeUntilPipe implements PipeTransform {
             }
         }
 
+        if (!relativeString) {
+            relativeString = 'In less than an hour';
+        }
 
         return `${relativeString} (${formattedDate})`;
     }
