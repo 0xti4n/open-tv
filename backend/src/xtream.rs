@@ -24,7 +24,6 @@ use rusqlite::Transaction;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::str::FromStr;
 use tokio::join;
 use url::Url;
 
@@ -38,6 +37,20 @@ const GET_VOD_CATEGORIES: &str = "get_vod_categories";
 const GET_EPG: &str = "get_simple_data_table";
 const LIVE_STREAM_EXTENSION: &str = "ts";
 const NO_SEASON_NUMBER: i64 = -9999;
+
+pub fn normalize_xtream_url(url: &str) -> Result<String> {
+    let url = url.trim();
+    let url = if url.contains("://") {
+        url.to_string()
+    } else {
+        format!("http://{url}")
+    };
+    let mut url = Url::parse(&url)?;
+    if url.path().is_empty() || url.path() == "/" {
+        url.set_path("/player_api.php");
+    }
+    Ok(url.to_string())
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct XtreamStream {
@@ -113,12 +126,10 @@ struct XtreamEPGItem {
 }
 
 fn build_xtream_url(source: &mut Source) -> Result<Url> {
-    let mut url = Url::parse(&source.url.clone().context("Missing URL")?)?;
-    source.url_origin = Some(
-        Url::from_str(&source.url.clone().unwrap())?
-            .origin()
-            .ascii_serialization(),
-    );
+    let normalized_url = normalize_xtream_url(source.url.as_deref().context("Missing URL")?)?;
+    source.url = Some(normalized_url.clone());
+    let mut url = Url::parse(&normalized_url)?;
+    source.url_origin = Some(url.origin().ascii_serialization());
     url.query_pairs_mut()
         .append_pair(
             "username",
@@ -161,8 +172,10 @@ pub async fn get_xtream(mut source: Source, wipe: bool) -> Result<()> {
         source.id = Some(sql::create_or_find_source_by_name(&tx, &source)?);
     }
     let mut fail_count = 0;
+    let mut first_error = None;
     live.and_then(|live| process_xtream(&tx, live, live_cats?, &source, media_type::LIVESTREAM))
         .unwrap_or_else(|e| {
+            first_error.get_or_insert_with(|| format!("{e:#}"));
             log::log(format!("{:?}", e.context("Failed to process live")));
             fail_count += 1;
         });
@@ -186,7 +199,8 @@ pub async fn get_xtream(mut source: Source, wipe: bool) -> Result<()> {
             Ok(_) => {}
             Err(e) => log::log(format!("Failed to rollback tx: {:?}", e)),
         }
-        return Err(anyhow::anyhow!("Too many Xtream requests failed"));
+        let first_error = first_error.unwrap_or_else(|| "Unknown live request error".to_string());
+        return Err(anyhow!("Too many Xtream requests failed: {first_error}"));
     }
     if wipe {
         sql::restore_preserve(&tx, source.id.context("no source id")?, channel_preserve)?;
@@ -202,7 +216,13 @@ where
 {
     let client = Client::builder().user_agent(user_agent).build()?;
     url.query_pairs_mut().append_pair("action", action);
-    let data = client.get(url).send().await?.json::<T>().await?;
+    let data = client
+        .get(url)
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<T>()
+        .await?;
     Ok(data)
 }
 
@@ -614,4 +634,29 @@ pub async fn get_all_expiries() -> Result<HashMap<i64, i64>> {
         })
         .collect();
     Ok(statuses)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_xtream_url;
+
+    #[test]
+    fn normalizes_xtream_urls() {
+        assert_eq!(
+            normalize_xtream_url("host:8080").unwrap(),
+            "http://host:8080/player_api.php"
+        );
+        assert_eq!(
+            normalize_xtream_url("http://host:8080/").unwrap(),
+            "http://host:8080/player_api.php"
+        );
+        assert_eq!(
+            normalize_xtream_url("  https://host/player_api.php  ").unwrap(),
+            "https://host/player_api.php"
+        );
+        assert_eq!(
+            normalize_xtream_url("http://host/custom/path").unwrap(),
+            "http://host/custom/path"
+        );
+    }
 }

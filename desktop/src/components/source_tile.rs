@@ -171,6 +171,19 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                         disabled: loading(),
                         onclick: move |_| {
                             let mut next = draft();
+                            if kind == source_type::XTREAM {
+                                if let Some(url) = next.url.as_deref() {
+                                    match nyx_tv_lib::xtream::normalize_xtream_url(url) {
+                                        Ok(url) => next.url = Some(url),
+                                        Err(message) => {
+                                            report_error(app, message.to_string());
+                                            return;
+                                        }
+                                    }
+                                }
+                                next.username = next.username.map(|value| value.trim().to_string());
+                                next.password = next.password.map(|value| value.trim().to_string());
+                            }
                             next.user_agent = next.user_agent.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
                             next.stream_user_agent = next.stream_user_agent.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
                             loading.set(true);

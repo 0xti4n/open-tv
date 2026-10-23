@@ -110,12 +110,16 @@ pub fn Setup() -> Element {
                 stream_user_agent: None,
                 last_updated: None,
             };
-            if source_kind == 2
+            if source_kind == source_type::XTREAM
                 && let Some(address) = source.url.as_mut()
-                && !address.starts_with("http://")
-                && !address.starts_with("https://")
             {
-                *address = format!("http://{address}");
+                match nyx_tv_lib::xtream::normalize_xtream_url(address) {
+                    Ok(normalized) => *address = normalized,
+                    Err(message) => {
+                        error.set(Some(message.to_string()));
+                        return;
+                    }
+                }
             }
             loading.set(true);
             error.set(None);
