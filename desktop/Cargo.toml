@@ -3,6 +3,7 @@ name = "open_tv"
 version = "1.9.1"
 edition = "2024"
 rust-version = "1.91.1"
+authors = ["Fredolx"]
 
 [[bin]]
 name = "open_tv"
