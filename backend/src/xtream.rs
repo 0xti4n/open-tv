@@ -219,10 +219,13 @@ where
     let data = client
         .get(url)
         .send()
-        .await?
-        .error_for_status()?
+        .await
+        .map_err(|e| e.without_url())?
+        .error_for_status()
+        .map_err(|e| e.without_url())?
         .json::<T>()
-        .await?;
+        .await
+        .map_err(|e| e.without_url())?;
     Ok(data)
 }
 
@@ -616,7 +619,16 @@ async fn get_status(source: &mut Source) -> Result<(i64, XtreamStatus)> {
     let url = build_xtream_url(source)?;
     let user_agent = get_user_agent_from_source(&source)?;
     let client = Client::builder().user_agent(user_agent).build()?;
-    let data = client.get(url).send().await?.json::<XtreamStatus>().await?;
+    let data = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| e.without_url())?
+        .error_for_status()
+        .map_err(|e| e.without_url())?
+        .json::<XtreamStatus>()
+        .await
+        .map_err(|e| e.without_url())?;
     Ok((source.id.context("no id")?, data))
 }
 
