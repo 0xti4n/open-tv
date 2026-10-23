@@ -58,33 +58,63 @@ pub fn Input(
         class.as_deref().unwrap_or("")
     );
 
-    rsx! {
-        input {
-            "data-name": "Input",
-            r#type: r#type.as_str(),
-            class: "{merged_class}",
-            placeholder: placeholder,
-            value: value,
-            name: name,
-            id: id,
-            disabled: disabled,
-            readonly: readonly,
-            required: required,
-            oninput: move |e| {
-                if let Some(handler) = &oninput {
-                    handler.call(e);
-                }
-            },
-            onfocus: move |e| {
-                if let Some(handler) = &onfocus {
-                    handler.call(e);
-                }
-            },
-            onblur: move |e| {
-                if let Some(handler) = &onblur {
-                    handler.call(e);
-                }
-            },
-        }
+    match value {
+        Some(value) => rsx! {
+            input {
+                "data-name": "Input",
+                r#type: r#type.as_str(),
+                class: "{merged_class}",
+                placeholder: placeholder,
+                value: value,
+                name: name,
+                id: id,
+                disabled: disabled,
+                readonly: readonly,
+                required: required,
+                oninput: move |e| {
+                    if let Some(handler) = &oninput {
+                        handler.call(e);
+                    }
+                },
+                onfocus: move |e| {
+                    if let Some(handler) = &onfocus {
+                        handler.call(e);
+                    }
+                },
+                onblur: move |e| {
+                    if let Some(handler) = &onblur {
+                        handler.call(e);
+                    }
+                },
+            }
+        },
+        None => rsx! {
+            input {
+                "data-name": "Input",
+                r#type: r#type.as_str(),
+                class: "{merged_class}",
+                placeholder: placeholder,
+                name: name,
+                id: id,
+                disabled: disabled,
+                readonly: readonly,
+                required: required,
+                oninput: move |e| {
+                    if let Some(handler) = &oninput {
+                        handler.call(e);
+                    }
+                },
+                onfocus: move |e| {
+                    if let Some(handler) = &onfocus {
+                        handler.call(e);
+                    }
+                },
+                onblur: move |e| {
+                    if let Some(handler) = &onblur {
+                        handler.call(e);
+                    }
+                },
+            }
+        },
     }
 }
