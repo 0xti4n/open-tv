@@ -39,6 +39,7 @@ pub fn TrayIntegration() -> Element {
         dioxus::desktop::use_tray_menu_event_handler(move |event| {
             match event.id().as_ref() {
                 "show" => {
+                    window.set_minimized(false);
                     window.set_visible(true);
                     window.set_focus();
                 }

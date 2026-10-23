@@ -3757,6 +3757,7 @@ version = "1.9.1"
 dependencies = [
  "arboard",
  "dioxus",
+ "directories",
  "icons",
  "open",
  "open_tv_lib",

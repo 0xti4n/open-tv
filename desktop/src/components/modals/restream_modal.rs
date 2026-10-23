@@ -71,13 +71,42 @@ pub fn RestreamModal(open: Signal<bool>, channel: Channel) -> Element {
                                         open_tv_lib::start_restream(port, &state, sender, channel).await
                                     });
                                     match receiver.await {
-                                        Ok(()) => started.set(true),
-                                        Err(error) => report_error(app, format!("Re-stream did not start: {error}")),
-                                    }
-                                    loading.set(false);
-                                    if let Ok(Err(message)) = task.await {
-                                        report_error(app, message);
-                                        started.set(false);
+                                        Ok(()) => {
+                                            started.set(true);
+                                            loading.set(false);
+                                            let mut started = started;
+                                            spawn(async move {
+                                                match task.await {
+                                                    Ok(Ok(())) => {}
+                                                    Ok(Err(message)) => {
+                                                        report_error(app, message);
+                                                        started.set(false);
+                                                    }
+                                                    Err(error) => {
+                                                        report_error(
+                                                            app,
+                                                            format!("Re-stream task failed: {error}"),
+                                                        );
+                                                        started.set(false);
+                                                    }
+                                                }
+                                            });
+                                        }
+                                        Err(receiver_error) => {
+                                            match task.await {
+                                                Ok(Err(message)) => report_error(app, message),
+                                                Ok(Ok(())) => report_error(
+                                                    app,
+                                                    format!("Re-stream did not start: {receiver_error}"),
+                                                ),
+                                                Err(error) => report_error(
+                                                    app,
+                                                    format!("Re-stream did not start: {error}"),
+                                                ),
+                                            }
+                                            loading.set(false);
+                                            started.set(false);
+                                        }
                                     }
                                 });
                             },

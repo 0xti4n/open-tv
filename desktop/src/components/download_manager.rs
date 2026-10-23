@@ -48,12 +48,14 @@ fn DownloadRow(download: ActiveDownload) -> Element {
                         let state = state.clone();
                         let id = id.clone();
                         spawn(async move {
-                        if let Err(message) = open_tv_lib::abort_download(&state, source_id, id.clone()).await {
-                            report_error(app, message);
-                        }
-                        app.write().downloads.retain(|item| item.id != id);
-                        notify(app, ToastKind::Info, "Download cancelled");
-                    });
+                            match open_tv_lib::abort_download(&state, source_id, id.clone()).await {
+                                Ok(()) => {
+                                    app.write().downloads.retain(|item| item.id != id);
+                                    notify(app, ToastKind::Info, "Download cancelled");
+                                }
+                                Err(message) => report_error(app, message),
+                            }
+                        });
                     },
                     "Cancel"
                 }

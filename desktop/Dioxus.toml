@@ -3,12 +3,6 @@ name = "open_tv"
 default_platform = "desktop"
 asset_dir = "assets"
 
-[desktop]
-title = "Fred TV (v{CARGO_PKG_VERSION})"
-width = 800
-height = 600
-resizable = true
-
 [bundle]
 identifier = "dev.fredol.open-tv"
 publisher = "Fredolx"

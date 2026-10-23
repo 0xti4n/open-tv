@@ -1,11 +1,18 @@
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use dioxus::prelude::*;
+use directories::ProjectDirs;
 
 use crate::state::{AppData, Toast, ToastKind};
 
 static NEXT_TOAST_ID: AtomicU64 = AtomicU64::new(1);
+
+pub fn app_data_dir() -> Option<PathBuf> {
+    ProjectDirs::from("dev", "fredol", "open-tv")
+        .map(|directories| directories.data_dir().to_path_buf())
+}
 
 pub async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
     tokio::task::spawn_blocking(f)

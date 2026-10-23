@@ -28,6 +28,8 @@ fn focus_element(id: String, scroll_to_top: bool) {
 #[component]
 pub fn Home() -> Element {
     let app = use_context::<Signal<AppData>>();
+    let mut zoom = use_context::<Signal<f64>>();
+    let window = dioxus::desktop::use_window();
     let navigator = use_navigator();
     let sources = app.read().sources.clone();
     let enabled_ids = sources
@@ -222,6 +224,19 @@ pub fn Home() -> Element {
                 }
 
                 if modifiers.contains(Modifiers::CONTROL) {
+                    let next_zoom = match character.as_str() {
+                        "=" | "+" => Some((zoom() + 0.1).min(10.0)),
+                        "-" => Some((zoom() - 0.1).max(0.1)),
+                        "0" => Some(1.0),
+                        _ => None,
+                    };
+                    if let Some(next_zoom) = next_zoom {
+                        zoom.set(next_zoom);
+                        window.set_zoom_level(next_zoom);
+                        event.prevent_default();
+                        return;
+                    }
+
                     let media_type = match character.as_str() {
                         "q" => Some(media_type::LIVESTREAM),
                         "w" => Some(media_type::MOVIE),

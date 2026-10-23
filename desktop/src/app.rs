@@ -5,7 +5,7 @@ use open_tv_lib::types::AppState;
 use tokio::sync::Mutex;
 
 use crate::{
-    backend::{blocking, report_error},
+    backend::{app_data_dir, blocking, report_error},
     components::{
         modals::error_modal::ErrorModal,
         modals::whats_new_modal::WhatsNewModal,
@@ -30,10 +30,13 @@ pub enum Route {
 pub fn app() -> Element {
     let mut app_data = use_context_provider(|| Signal::new(AppData::default()));
     let app_state = use_context_provider(|| Arc::new(Mutex::new(AppState::default())));
+    let mut zoom = use_context_provider(|| Signal::new(1.0_f64));
     let mut whats_new_open = use_signal(|| false);
+    let window = dioxus::desktop::use_window();
 
     use_effect(move || {
         let app_state = app_state.clone();
+        let window = window.clone();
         spawn(async move {
             if let Err(message) = blocking(open_tv_lib::initialize_database).await {
                 report_error(app_data, message.clone());
@@ -58,6 +61,14 @@ pub fn app() -> Element {
                 }
             };
 
+            let zoom_level = settings
+                .as_ref()
+                .and_then(|settings| settings.zoom)
+                .unwrap_or(100) as f64
+                / 100.0;
+            zoom.set(zoom_level);
+            window.set_zoom_level(zoom_level);
+
             if settings
                 .as_ref()
                 .is_some_and(|settings| settings.refresh_on_start == Some(true))
@@ -72,12 +83,10 @@ pub fn app() -> Element {
                 report_error(app_data, message);
             }
             if !sources.is_empty() {
-                let last_seen = dioxus::document::eval(
-                    "return localStorage.getItem('lastSeenVersion')",
-                )
-                .join::<Option<String>>()
-                .await
-                .unwrap_or(None);
+                let path = app_data_dir().map(|directory| directory.join("last_seen_version"));
+                let last_seen =
+                    blocking(move || path.and_then(|path| std::fs::read_to_string(path).ok()))
+                        .await;
                 if last_seen.as_deref() != Some(env!("CARGO_PKG_VERSION")) {
                     whats_new_open.set(true);
                 }

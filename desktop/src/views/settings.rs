@@ -30,9 +30,18 @@ fn defaults() -> AppSettings {
     }
 }
 
-async fn save_settings(app: Signal<AppData>, settings: AppSettings) {
+async fn save_settings(
+    app: Signal<AppData>,
+    settings: AppSettings,
+    window: Signal<dioxus::desktop::DesktopContext>,
+    mut zoom: Signal<f64>,
+) {
+    let zoom_level = settings.zoom.unwrap_or(100) as f64 / 100.0;
     match blocking(move || open_tv_lib::update_settings(settings)).await {
-        Ok(()) => {}
+        Ok(()) => {
+            zoom.set(zoom_level);
+            window.read().set_zoom_level(zoom_level);
+        }
         Err(message) => report_error(app, message),
     }
 }
@@ -40,6 +49,9 @@ async fn save_settings(app: Signal<AppData>, settings: AppSettings) {
 #[component]
 pub fn Settings() -> Element {
     let mut app = use_context::<Signal<AppData>>();
+    let zoom = use_context::<Signal<f64>>();
+    let desktop_window = dioxus::desktop::use_window();
+    let window = use_signal(|| desktop_window.clone());
     let navigator = use_navigator();
     let mut settings = use_signal(|| app.read().settings.clone().unwrap_or_else(defaults));
     let mut loading = use_signal(|| false);
@@ -71,7 +83,7 @@ pub fn Settings() -> Element {
 
     let update = move |settings: AppSettings| {
         let settings = settings.clone();
-        spawn(async move { save_settings(app, settings).await });
+        spawn(async move { save_settings(app, settings, window, zoom).await });
     };
 
     rsx! {
@@ -100,7 +112,7 @@ pub fn Settings() -> Element {
                                             let mut current = app.read().settings.clone().unwrap_or_else(defaults);
                                             current.recording_path = Some(folder.path().to_string_lossy().to_string());
                                             app.write().settings = Some(current.clone());
-                                            save_settings(app, current).await;
+                                            save_settings(app, current, window, zoom).await;
                                         }
                                     });
                                 },
