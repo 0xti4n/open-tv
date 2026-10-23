@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use open_tv_lib::{source_type, types::Settings as AppSettings};
+use nyx_tv_lib::{source_type, types::Settings as AppSettings};
 
 use crate::{
     app::Route,
@@ -37,7 +37,7 @@ async fn save_settings(
     mut zoom: Signal<f64>,
 ) {
     let zoom_level = settings.zoom.unwrap_or(100) as f64 / 100.0;
-    match blocking(move || open_tv_lib::update_settings(settings)).await {
+    match blocking(move || nyx_tv_lib::update_settings(settings)).await {
         Ok(()) => {
             zoom.set(zoom_level);
             window.read().set_zoom_level(zoom_level);
@@ -73,7 +73,7 @@ pub fn Settings() -> Element {
         if has_xtream && !expiries_loaded() {
             expiries_loaded.set(true);
             spawn(async move {
-                match open_tv_lib::get_all_expiries().await {
+                match nyx_tv_lib::get_all_expiries().await {
                     Ok(expiries) => app.write().expiries = expiries,
                     Err(message) => report_error(app, message),
                 }
@@ -264,11 +264,11 @@ pub fn Settings() -> Element {
                         onclick: move |_| {
                             spawn(async move {
                                 loading.set(true);
-                                match open_tv_lib::refresh_all().await {
+                                match nyx_tv_lib::refresh_all().await {
                                     Ok(()) => notify(app, ToastKind::Success, "Successfully updated all sources"),
                                     Err(message) => report_error(app, message),
                                 }
-                                match blocking(open_tv_lib::get_sources).await {
+                                match blocking(nyx_tv_lib::get_sources).await {
                                     Ok(sources) => app.write().sources = sources,
                                     Err(message) => report_error(app, message),
                                 }
@@ -280,7 +280,7 @@ pub fn Settings() -> Element {
                     button {
                         class: "rounded-md border border-border px-4 py-2 text-sm hover:bg-accent",
                         onclick: move |_| { spawn(async move {
-                            match blocking(open_tv_lib::clear_history).await {
+                            match blocking(nyx_tv_lib::clear_history).await {
                                 Ok(()) => notify(app, ToastKind::Success, "History cleared successfully"),
                                 Err(message) => report_error(app, message),
                             }

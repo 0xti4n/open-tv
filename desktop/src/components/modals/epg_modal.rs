@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use dioxus::prelude::*;
-use open_tv_lib::types::{AppState, Channel, EPG, EPGNotify};
+use nyx_tv_lib::types::{AppState, Channel, EPG, EPGNotify};
 use tokio::sync::Mutex;
 
 use crate::{
@@ -18,7 +18,7 @@ pub fn EpgModal(open: Signal<bool>, channel: Channel, programs: Vec<EPG>) -> Ele
 
     use_effect(move || {
         spawn(async move {
-            match blocking(open_tv_lib::get_epg_ids).await {
+            match blocking(nyx_tv_lib::get_epg_ids).await {
                 Ok(ids) => watched.set(ids),
                 Err(message) => report_error(app, message),
             }
@@ -53,9 +53,9 @@ pub fn EpgModal(open: Signal<bool>, channel: Channel, programs: Vec<EPG>) -> Ele
                                             let channel_name = channel_name.clone();
                                             spawn(async move {
                                                 let result = if is_watched {
-                                                    open_tv_lib::remove_epg(&state, id.clone()).await
+                                                    nyx_tv_lib::remove_epg(&state, id.clone()).await
                                                 } else {
-                                                    open_tv_lib::add_epg(&state, EPGNotify {
+                                                    nyx_tv_lib::add_epg(&state, EPGNotify {
                                                         epg_id: id.clone(),
                                                         title: item.title,
                                                         start_timestamp: item.start_timestamp,

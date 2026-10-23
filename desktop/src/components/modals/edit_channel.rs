@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use open_tv_lib::{
+use nyx_tv_lib::{
     media_type,
     types::{Channel, CustomChannel, IdName},
 };
@@ -11,21 +11,32 @@ use crate::{
 };
 
 #[component]
-pub fn EditChannelModal(
-    open: Signal<bool>,
-    source_id: i64,
-    channel: Option<Channel>,
-) -> Element {
+pub fn EditChannelModal(open: Signal<bool>, source_id: i64, channel: Option<Channel>) -> Element {
     let app = use_context::<Signal<AppData>>();
-    let mut name = use_signal(|| channel.as_ref().map(|channel| channel.name.clone()).unwrap_or_default());
-    let mut url = use_signal(|| channel.as_ref().and_then(|channel| channel.url.clone()).unwrap_or_default());
+    let mut name = use_signal(|| {
+        channel
+            .as_ref()
+            .map(|channel| channel.name.clone())
+            .unwrap_or_default()
+    });
+    let mut url = use_signal(|| {
+        channel
+            .as_ref()
+            .and_then(|channel| channel.url.clone())
+            .unwrap_or_default()
+    });
     let mut selected_media_type = use_signal(|| {
         channel
             .as_ref()
             .map(|channel| channel.media_type)
             .unwrap_or(media_type::LIVESTREAM)
     });
-    let mut image = use_signal(|| channel.as_ref().and_then(|channel| channel.image.clone()).unwrap_or_default());
+    let mut image = use_signal(|| {
+        channel
+            .as_ref()
+            .and_then(|channel| channel.image.clone())
+            .unwrap_or_default()
+    });
     let mut query = use_signal(String::new);
     let mut groups = use_signal(Vec::<IdName>::new);
     let mut selected_group = use_signal(|| channel.as_ref().and_then(|channel| channel.group_id));
@@ -67,7 +78,7 @@ pub fn EditChannelModal(
                             query.set(value.clone());
                             let source_id = source_id;
                             spawn(async move {
-                                match blocking(move || open_tv_lib::group_auto_complete(Some(value), source_id)).await {
+                                match blocking(move || nyx_tv_lib::group_auto_complete(Some(value), source_id)).await {
                                     Ok(results) => groups.set(results),
                                     Err(message) => report_error(app, message),
                                 }
@@ -119,9 +130,9 @@ pub fn EditChannelModal(
                         spawn(async move {
                             let custom = CustomChannel { data, headers: None };
                             let result = if existing {
-                                blocking(move || open_tv_lib::edit_custom_channel(custom)).await
+                                blocking(move || nyx_tv_lib::edit_custom_channel(custom)).await
                             } else {
-                                blocking(move || open_tv_lib::add_custom_channel(custom)).await
+                                blocking(move || nyx_tv_lib::add_custom_channel(custom)).await
                             };
                             match result {
                                 Ok(()) => {

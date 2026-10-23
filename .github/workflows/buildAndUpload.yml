@@ -54,8 +54,8 @@ jobs:
               }
           }
 
-          New-Item -Path 'C:\open-tv-deps' -ItemType Directory -Force
-          7z e .\mpv.zip -oC:\open-tv-deps mpv.exe vulkan-1.dll -y
+          New-Item -Path 'C:\nyx-tv-deps' -ItemType Directory -Force
+          7z e .\mpv.zip -oC:\nyx-tv-deps mpv.exe vulkan-1.dll -y
 
       - name: Download ffmpeg
         if: matrix.os == 'windows-latest'
@@ -73,7 +73,7 @@ jobs:
                   Start-Sleep -Seconds $retryDelay
               }
           }
-          7z e .\ffmpeg.zip -oC:\open-tv-deps ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe
+          7z e .\ffmpeg.zip -oC:\nyx-tv-deps ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe
 
       - name: Download yt-dlp
         if: matrix.os == 'windows-latest'
@@ -91,7 +91,7 @@ jobs:
                   Start-Sleep -Seconds $retryDelay
               }
           }
-          Move-Item -Path yt-dlp.exe -Destination C:\open-tv-deps
+          Move-Item -Path yt-dlp.exe -Destination C:\nyx-tv-deps
 
       - name: Install deps linux
         if: matrix.os == 'ubuntu-22.04'
@@ -132,22 +132,22 @@ jobs:
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: open-tv-windows
-          path: target/dx/open_tv/bundle/windows/msi/*.msi
+          name: nyx-tv-windows
+          path: target/dx/nyx-tv/bundle/windows/msi/*.msi
           retention-days: 60
 
       - name: Upload DEB
         if: matrix.os == 'ubuntu-22.04'
         uses: actions/upload-artifact@v4
         with:
-          name: open-tv-debian
-          path: target/dx/open_tv/bundle/linux/deb/*.deb
+          name: nyx-tv-debian
+          path: target/dx/nyx-tv/bundle/linux/deb/*.deb
           retention-days: 60
 
       - name: Upload RPM
         if: matrix.os == 'ubuntu-22.04'
         uses: actions/upload-artifact@v4
         with:
-          name: open-tv-redhat
-          path: target/dx/open_tv/bundle/linux/rpm/*.rpm
+          name: nyx-tv-redhat
+          path: target/dx/nyx-tv/bundle/linux/rpm/*.rpm
           retention-days: 60

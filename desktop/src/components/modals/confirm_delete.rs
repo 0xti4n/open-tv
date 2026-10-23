@@ -26,7 +26,7 @@ pub fn ConfirmDeleteModal(open: Signal<bool>) -> Element {
                 disabled: loading(),
                 onclick: move |_| { spawn(async move {
                     loading.set(true);
-                    match blocking(open_tv_lib::delete_database).await {
+                    match blocking(nyx_tv_lib::delete_database).await {
                         Ok(()) => {
                             notify(app, ToastKind::Success, "Database deletion scheduled");
                             open.set(false);

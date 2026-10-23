@@ -1,21 +1,20 @@
 [package]
-name = "open_tv"
+name = "nyx-tv"
 version = "1.9.1"
 edition = "2024"
 rust-version = "1.91.1"
-authors = ["Fredolx"]
+authors = ["0xti4n"]
 
 [[bin]]
-name = "open_tv"
+name = "nyx-tv"
 path = "src/main.rs"
 
 [dependencies]
 dioxus = { version = "0.7.10", features = ["desktop", "router"] }
-directories = "6.0.0"
 icons = { version = "0.18", features = ["dioxus"] }
 arboard = "3.6"
 open = "5.3"
-open_tv_lib = { path = "../backend" }
+nyx_tv_lib = { path = "../backend" }
 rfd = { version = "0.15", default-features = false, features = ["gtk3"] }
 single-instance = "0.3.3"
 strum = { version = "0.28", features = ["derive"] }

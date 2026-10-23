@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use open_tv_lib::{
+use nyx_tv_lib::{
     bulk_action_type, media_type,
     types::{Channel, Filters},
     view_type,
@@ -10,7 +10,16 @@ use open_tv_lib::{
 use crate::{
     app::Route,
     backend::{blocking, notify, report_error},
-    components::{channel_tile::ChannelTile, sort_button::SortButton, ui::{button::{Button, ButtonSize, ButtonVariant}, dropdown_menu::DropdownMenu, input::{Input, InputType}, spinner::Spinner}},
+    components::{
+        channel_tile::ChannelTile,
+        sort_button::SortButton,
+        ui::{
+            button::{Button, ButtonSize, ButtonVariant},
+            dropdown_menu::DropdownMenu,
+            input::{Input, InputType},
+            spinner::Spinner,
+        },
+    },
     state::{AppData, ToastKind},
 };
 
@@ -140,7 +149,7 @@ pub fn Home() -> Element {
                 loading.set(false);
                 return;
             }
-            match blocking(move || open_tv_lib::search(request_filters)).await {
+            match blocking(move || nyx_tv_lib::search(request_filters)).await {
                 Ok(results) => {
                     if request_number() != current_request {
                         return;
@@ -322,7 +331,7 @@ pub fn Home() -> Element {
             },
             header { class: "flex flex-wrap items-center justify-between gap-3",
                 div { class: "flex items-center gap-3",
-                    h1 { class: "text-2xl font-semibold tracking-tight", "Fred TV" }
+                    h1 { class: "text-2xl font-semibold tracking-tight", "Nyx TV" }
                     span { class: "text-sm text-muted-foreground", "{title}" }
                 }
                 nav { class: "flex flex-wrap items-center gap-2",
@@ -347,10 +356,10 @@ pub fn Home() -> Element {
                             let mut app = app;
                             spawn(async move {
                                 loading.set(true);
-                                if let Err(message) = open_tv_lib::refresh_all().await {
+                                if let Err(message) = nyx_tv_lib::refresh_all().await {
                                     report_error(app, message);
                                 }
-                                match blocking(open_tv_lib::get_sources).await {
+                                match blocking(nyx_tv_lib::get_sources).await {
                                     Ok(sources) => app.write().sources = sources,
                                     Err(message) => report_error(app, message),
                                 }
@@ -419,7 +428,7 @@ pub fn Home() -> Element {
                                     };
                                     bulk_menu.set(false);
                                     spawn(async move {
-                                        match blocking(move || open_tv_lib::bulk_update(filters, action)).await {
+                                        match blocking(move || nyx_tv_lib::bulk_update(filters, action)).await {
                                             Ok(()) => {
                                                 page.set(1);
                                                 refresh_number.with_mut(|number| *number += 1);
@@ -579,7 +588,7 @@ pub fn Home() -> Element {
                                         series_id.set(channel.series_id.map(|id| id as i64));
                                         let episode_channel = channel.clone();
                                         spawn(async move {
-                                            if let Err(message) = open_tv_lib::get_episodes(episode_channel).await {
+                                            if let Err(message) = nyx_tv_lib::get_episodes(episode_channel).await {
                                                 report_error(app, message);
                                             }
                                         });

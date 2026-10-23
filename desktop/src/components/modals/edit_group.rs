@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use open_tv_lib::types::Group;
+use nyx_tv_lib::types::Group;
 
 use crate::{
     backend::{blocking, notify, report_error},
@@ -10,8 +10,18 @@ use crate::{
 #[component]
 pub fn EditGroupModal(open: Signal<bool>, source_id: i64, group: Option<Group>) -> Element {
     let app = use_context::<Signal<AppData>>();
-    let mut name = use_signal(|| group.as_ref().map(|group| group.name.clone()).unwrap_or_default());
-    let mut image = use_signal(|| group.as_ref().and_then(|group| group.image.clone()).unwrap_or_default());
+    let mut name = use_signal(|| {
+        group
+            .as_ref()
+            .map(|group| group.name.clone())
+            .unwrap_or_default()
+    });
+    let mut image = use_signal(|| {
+        group
+            .as_ref()
+            .and_then(|group| group.image.clone())
+            .unwrap_or_default()
+    });
     let mut error = use_signal(|| None::<String>);
     let mut loading = use_signal(|| false);
 
@@ -47,7 +57,7 @@ pub fn EditGroupModal(open: Signal<bool>, source_id: i64, group: Option<Group>) 
                                 Ok(false)
                             } else {
                                 let query = name_value.clone();
-                                blocking(move || open_tv_lib::group_exists(query, source_id)).await
+                                blocking(move || nyx_tv_lib::group_exists(query, source_id)).await
                             };
                             match exists {
                                 Ok(true) => error.set(Some("A group with this name already exists.".to_string())),
@@ -61,9 +71,9 @@ pub fn EditGroupModal(open: Signal<bool>, source_id: i64, group: Option<Group>) 
                                         hidden: group.as_ref().and_then(|group| group.hidden),
                                     };
                                     let result = if group.is_some() {
-                                        blocking(move || open_tv_lib::edit_custom_group(new_group)).await
+                                        blocking(move || nyx_tv_lib::edit_custom_group(new_group)).await
                                     } else {
-                                        blocking(move || open_tv_lib::add_custom_group(new_group)).await
+                                        blocking(move || nyx_tv_lib::add_custom_group(new_group)).await
                                     };
                                     match result {
                                         Ok(()) => {

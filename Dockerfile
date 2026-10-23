@@ -35,15 +35,15 @@ ENV WEBKIT_DISABLE_DMABUF_RENDERER=1
 
 WORKDIR /tmp
 
-COPY --from=builder /app/target/dx/open_tv/bundle/linux/deb/*.deb ./open-tv.deb
+COPY --from=builder /app/target/dx/nyx-tv/bundle/linux/deb/*.deb ./nyx-tv.deb
 
-RUN apt update && apt install -y ./open-tv.deb \
+RUN apt update && apt install -y ./nyx-tv.deb \
   mesa-utils \
   libgl1-mesa-dri \
   mpv \
   ffmpeg \
   yt-dlp \
   && apt clean && rm -rf /var/lib/apt/lists/* \
-  && rm open-tv.deb
+  && rm nyx-tv.deb
 
-CMD ["open_tv"]
+CMD ["nyx-tv"]

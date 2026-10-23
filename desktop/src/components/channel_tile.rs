@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use dioxus::prelude::*;
-use open_tv_lib::{media_type, types::{AppState, Channel}};
+use nyx_tv_lib::{
+    media_type,
+    types::{AppState, Channel},
+};
 use tokio::sync::Mutex;
 
 use crate::{
     backend::{blocking, notify, report_error},
     components::modals::{
-        delete_group::DeleteGroupModal,
-        dialog::Dialog,
-        edit_channel::EditChannelModal,
-        epg_modal::EpgModal,
-        restream_modal::RestreamModal,
+        delete_group::DeleteGroupModal, dialog::Dialog, edit_channel::EditChannelModal,
+        epg_modal::EpgModal, restream_modal::RestreamModal,
     },
     state::{ActiveDownload, AppData, ToastKind},
 };
@@ -63,12 +63,20 @@ pub fn ChannelTile(
     let can_epg = !custom_source
         && channel.media_type == media_type::LIVESTREAM
         && app.read().sources.iter().any(|source| {
-            source.id == channel.source_id && source.source_type == open_tv_lib::source_type::XTREAM
+            source.id == channel.source_id && source.source_type == nyx_tv_lib::source_type::XTREAM
         });
-    let download_id = format!("{}-{}", channel.source_id.unwrap_or_default(), channel.id.unwrap_or_default());
+    let download_id = format!(
+        "{}-{}",
+        channel.source_id.unwrap_or_default(),
+        channel.id.unwrap_or_default()
+    );
     let download_id_for_download = download_id.clone();
     let download_id_for_cancel = download_id.clone();
-    let downloading = app.read().downloads.iter().any(|download| download.id == download_id);
+    let downloading = app
+        .read()
+        .downloads
+        .iter()
+        .any(|download| download.id == download_id);
 
     rsx! {
         article {
@@ -145,7 +153,7 @@ pub fn ChannelTile(
                                 let Some(id) = channel_history.id else { return; };
                                 let channel_name = channel_history.name.clone();
                                 spawn(async move {
-                                    match blocking(move || open_tv_lib::remove_from_history(id)).await {
+                                    match blocking(move || nyx_tv_lib::remove_from_history(id)).await {
                                         Ok(()) => notify(app, ToastKind::Success, format!("Removed \"{channel_name}\" from history")),
                                         Err(message) => report_error(app, message),
                                     }
@@ -163,9 +171,9 @@ pub fn ChannelTile(
                                 let was_favorite = favorite();
                                 spawn(async move {
                                     let result = if was_favorite {
-                                        blocking(move || open_tv_lib::unfavorite_channel(id)).await
+                                        blocking(move || nyx_tv_lib::unfavorite_channel(id)).await
                                     } else {
-                                        blocking(move || open_tv_lib::favorite_channel(id)).await
+                                        blocking(move || nyx_tv_lib::favorite_channel(id)).await
                                     };
                                     match result {
                                         Ok(()) => {
@@ -189,9 +197,9 @@ pub fn ChannelTile(
                                 let hide = !hidden();
                                 spawn(async move {
                                     let result = if is_group {
-                                        blocking(move || open_tv_lib::hide_group(id, hide)).await
+                                        blocking(move || nyx_tv_lib::hide_group(id, hide)).await
                                     } else {
-                                        blocking(move || open_tv_lib::hide_channel(id, hide)).await
+                                        blocking(move || nyx_tv_lib::hide_channel(id, hide)).await
                                     };
                                     match result {
                                         Ok(()) => {
@@ -221,7 +229,7 @@ pub fn ChannelTile(
                                     } else {
                                         return;
                                     };
-                                    if let Err(message) = open_tv_lib::play(channel, true, path, &app_state).await {
+                                    if let Err(message) = nyx_tv_lib::play(channel, true, path, &app_state).await {
                                         report_error(app, message);
                                     }
                                 });
@@ -239,7 +247,7 @@ pub fn ChannelTile(
                                 let id = download_id_for_download.clone();
                                 let mut app = app;
                                 spawn(async move {
-                                    let is_container = match open_tv_lib::is_container() {
+                                    let is_container = match nyx_tv_lib::is_container() {
                                         Ok(is_container) => is_container,
                                         Err(message) => {
                                             report_error(app, message);
@@ -281,7 +289,7 @@ pub fn ChannelTile(
                                     let task_state = state.clone();
                                     let task_id = id.clone();
                                     let task = tokio::spawn(async move {
-                                        open_tv_lib::download(
+                                        nyx_tv_lib::download(
                                             &task_state,
                                             sender,
                                             channel,
@@ -317,7 +325,7 @@ pub fn ChannelTile(
                                 let id = download_id_for_cancel.clone();
                                 let source_id = channel_context.source_id.unwrap_or_default();
                                 spawn(async move {
-                                    if let Err(message) = open_tv_lib::abort_download(&state, source_id, id).await {
+                                    if let Err(message) = nyx_tv_lib::abort_download(&state, source_id, id).await {
                                         report_error(app, message);
                                     }
                                 });
@@ -332,7 +340,7 @@ pub fn ChannelTile(
                                 menu_position.set(None);
                                 let channel = channel_epg.clone();
                                 spawn(async move {
-                                    match open_tv_lib::get_epg(channel).await {
+                                    match nyx_tv_lib::get_epg(channel).await {
                                         Ok(programs) if programs.is_empty() => notify(app, ToastKind::Info, "No EPG data for this channel"),
                                         Ok(programs) => { epg_programs.set(programs); epg_open.set(true); }
                                         Err(message) => report_error(app, message),
@@ -351,12 +359,12 @@ pub fn ChannelTile(
                                 let channel = channel_share.clone();
                                 spawn(async move {
                                     if let Some(file) = rfd::AsyncFileDialog::new()
-                                        .add_filter("Open TV channel", &["otv"])
+                                        .add_filter("Nyx TV channel", &["otv"])
                                         .set_file_name(format!("{}.otv", channel.name))
                                         .save_file().await
                                     {
                                         let path = file.path().to_string_lossy().to_string();
-                                        match blocking(move || open_tv_lib::share_custom_channel(channel, path)).await {
+                                        match blocking(move || nyx_tv_lib::share_custom_channel(channel, path)).await {
                                             Ok(()) => notify(app, ToastKind::Success, "Channel exported successfully"),
                                             Err(message) => report_error(app, message),
                                         }
@@ -373,7 +381,7 @@ pub fn ChannelTile(
                                     delete_group_open.set(true);
                                 } else if let Some(id) = channel_delete.id {
                                     spawn(async move {
-                                        match blocking(move || open_tv_lib::delete_custom_channel(id)).await {
+                                        match blocking(move || nyx_tv_lib::delete_custom_channel(id)).await {
                                             Ok(()) => notify(app, ToastKind::Success, "Channel deleted"),
                                             Err(message) => report_error(app, message),
                                         }
@@ -480,9 +488,7 @@ fn activate_channel(
     } else if starting() {
         if let (Some(source_id), Some(id)) = (channel.source_id, channel.id) {
             spawn(async move {
-                if let Err(message) =
-                    open_tv_lib::cancel_play(source_id, id, &app_state).await
-                {
+                if let Err(message) = nyx_tv_lib::cancel_play(source_id, id, &app_state).await {
                     report_error(app, message);
                 }
             });
@@ -492,13 +498,13 @@ fn activate_channel(
         starting.set(true);
         if let Some(id) = channel.id {
             spawn(async move {
-                if let Err(message) = blocking(move || open_tv_lib::add_last_watched(id)).await {
+                if let Err(message) = blocking(move || nyx_tv_lib::add_last_watched(id)).await {
                     report_error(app, message);
                 }
             });
         }
         spawn(async move {
-            if let Err(message) = open_tv_lib::play(channel, false, None, &app_state).await {
+            if let Err(message) = nyx_tv_lib::play(channel, false, None, &app_state).await {
                 report_error(app, message);
             }
             starting.set(false);

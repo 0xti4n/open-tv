@@ -1,8 +1,8 @@
 [package]
-name = "open_tv_lib"
+name = "nyx_tv_lib"
 version = "1.9.1"
 description = "Fast And Powerful IPTV App"
-authors = ["Frédéric Lachapelle"]
+authors = ["0xti4n"]
 license = ""
 repository = ""
 edition = "2024"
@@ -39,3 +39,6 @@ shell-words = "1.1.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winsplit = "0.1.0"
+
+[dev-dependencies]
+tempfile = "3.20.0"

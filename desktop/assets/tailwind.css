@@ -545,13 +545,6 @@
   .gap-7 {
     gap: calc(var(--spacing) * 7);
   }
-  .space-y-1 {
-    :where(& > :not(:last-child)) {
-      --tw-space-y-reverse: 0;
-      margin-block-start: calc(calc(var(--spacing) * 1) * var(--tw-space-y-reverse));
-      margin-block-end: calc(calc(var(--spacing) * 1) * calc(1 - var(--tw-space-y-reverse)));
-    }
-  }
   .space-y-3 {
     :where(& > :not(:last-child)) {
       --tw-space-y-reverse: 0;
@@ -794,9 +787,6 @@
   .py-10 {
     padding-block: calc(var(--spacing) * 10);
   }
-  .pl-5 {
-    padding-left: calc(var(--spacing) * 5);
-  }
   .text-center {
     text-align: center;
   }
@@ -914,9 +904,6 @@
   }
   .text-white {
     color: var(--color-white);
-  }
-  .underline {
-    text-decoration-line: underline;
   }
   .underline-offset-4 {
     text-underline-offset: 4px;

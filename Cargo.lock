@@ -3556,6 +3556,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "nyx-tv"
+version = "1.9.1"
+dependencies = [
+ "arboard",
+ "dioxus",
+ "icons",
+ "nyx_tv_lib",
+ "open",
+ "rfd 0.15.3",
+ "single-instance",
+ "strum",
+ "tokio",
+ "tw_merge",
+]
+
+[[package]]
+name = "nyx_tv_lib"
+version = "1.9.1"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "directories",
+ "futures",
+ "if-addrs",
+ "indexmap",
+ "log",
+ "notify-rust",
+ "r2d2",
+ "r2d2_sqlite",
+ "regex",
+ "reqwest",
+ "rusqlite",
+ "rusqlite_migration",
+ "serde",
+ "serde_json",
+ "shell-words",
+ "simplelog",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "url",
+ "warp",
+ "which",
+ "winsplit",
+]
+
+[[package]]
 name = "objc"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3708,55 +3757,6 @@ checksum = "8d8c8b8e725ad26404d6896eb2f064294a0a7b4f1d9120210d85544684c4ca95"
 dependencies = [
  "is-wsl",
  "libc",
-]
-
-[[package]]
-name = "open_tv"
-version = "1.9.1"
-dependencies = [
- "arboard",
- "dioxus",
- "directories",
- "icons",
- "open",
- "open_tv_lib",
- "rfd 0.15.3",
- "single-instance",
- "strum",
- "tokio",
- "tw_merge",
-]
-
-[[package]]
-name = "open_tv_lib"
-version = "1.9.1"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "bytes",
- "chrono",
- "directories",
- "futures",
- "if-addrs",
- "indexmap",
- "log",
- "notify-rust",
- "r2d2",
- "r2d2_sqlite",
- "regex",
- "reqwest",
- "rusqlite",
- "rusqlite_migration",
- "serde",
- "serde_json",
- "shell-words",
- "simplelog",
- "tokio",
- "tokio-util",
- "url",
- "warp",
- "which",
- "winsplit",
 ]
 
 [[package]]

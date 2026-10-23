@@ -1,0 +1,10 @@
+[Desktop Entry]
+Categories=AudioVideo;Video;
+Comment=Fast And Powerful IPTV App
+Exec=nyx-tv
+Icon=dev.nyxtv.nyx-tv
+Keywords=nyx;tv;iptv;
+Name=Nyx TV
+StartupWMClass=nyx-tv
+Terminal=false
+Type=Application

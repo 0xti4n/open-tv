@@ -32,7 +32,7 @@ pub fn DownloadManager() -> Element {
 #[component]
 fn DownloadRow(download: ActiveDownload) -> Element {
     let mut app = use_context::<Signal<AppData>>();
-    let state = use_context::<std::sync::Arc<tokio::sync::Mutex<open_tv_lib::types::AppState>>>();
+    let state = use_context::<std::sync::Arc<tokio::sync::Mutex<nyx_tv_lib::types::AppState>>>();
     let id = download.id.clone();
     let source_id = download.source_id;
     let name = download.name.clone();
@@ -48,7 +48,7 @@ fn DownloadRow(download: ActiveDownload) -> Element {
                         let state = state.clone();
                         let id = id.clone();
                         spawn(async move {
-                            match open_tv_lib::abort_download(&state, source_id, id.clone()).await {
+                            match nyx_tv_lib::abort_download(&state, source_id, id.clone()).await {
                                 Ok(()) => {
                                     app.write().downloads.retain(|item| item.id != id);
                                     notify(app, ToastKind::Info, "Download cancelled");

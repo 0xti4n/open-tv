@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use open_tv_lib::types::{Channel, IdName};
+use nyx_tv_lib::types::{Channel, IdName};
 
 use crate::{
     backend::{blocking, notify, report_error},
@@ -28,7 +28,7 @@ pub fn DeleteGroupModal(open: Signal<bool>, group: Channel) -> Element {
                     let text = event.value();
                     query.set(text.clone());
                     spawn(async move {
-                        match blocking(move || open_tv_lib::group_auto_complete(Some(text), source_id)).await {
+                        match blocking(move || nyx_tv_lib::group_auto_complete(Some(text), source_id)).await {
                             Ok(results) => groups.set(results.into_iter().filter(|result| Some(result.id) != group.id).collect()),
                             Err(message) => report_error(app, message),
                         }
@@ -53,7 +53,7 @@ pub fn DeleteGroupModal(open: Signal<bool>, group: Channel) -> Element {
                         let target = new_id();
                         loading.set(true);
                         spawn(async move {
-                            match blocking(move || open_tv_lib::delete_custom_group(id, target, true)).await {
+                            match blocking(move || nyx_tv_lib::delete_custom_group(id, target, true)).await {
                                 Ok(()) => {
                                     notify(app, ToastKind::Success, "Successfully deleted category");
                                     open.set(false);

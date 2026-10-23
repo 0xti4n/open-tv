@@ -28,13 +28,13 @@ pub fn ImportModal(open: Signal<bool>, source_id: Option<i64>) -> Element {
                         let override_name = (!override_name.is_empty()).then_some(override_name);
                         spawn(async move {
                             if let Some(file) = rfd::AsyncFileDialog::new()
-                                .add_filter("Fred TV export", &["otv", "otvg"])
+                                .add_filter("Nyx TV export", &["otv", "otvg"])
                                 .pick_file()
                                 .await
                             {
                                 loading.set(true);
                                 let path = file.path().to_string_lossy().to_string();
-                                match blocking(move || open_tv_lib::import(path, source_id, override_name)).await {
+                                match blocking(move || nyx_tv_lib::import(path, source_id, override_name)).await {
                                     Ok(()) => {
                                         notify(app, ToastKind::Success, "Successfully imported file");
                                         open.set(false);

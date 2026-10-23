@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use open_tv_lib::types::{Settings as AppSettings, Source};
+use nyx_tv_lib::types::{Settings as AppSettings, Source};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum ToastKind {

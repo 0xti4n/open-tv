@@ -2,6 +2,7 @@ use std::vec;
 use std::{collections::HashMap, sync::LazyLock};
 
 use crate::log::log;
+use crate::paths::project_dirs;
 use crate::sort_type;
 use crate::types::{
     ChannelPreserve, CustomChannel, CustomChannelExtraData, EPGNotify, ExportedGroup, Group,
@@ -13,7 +14,6 @@ use crate::{
     view_type,
 };
 use anyhow::{Context, Result, anyhow};
-use directories::ProjectDirs;
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{OptionalExtension, Row, Transaction, params, params_from_iter};
@@ -33,10 +33,7 @@ fn create_connection_pool() -> Pool<SqliteConnectionManager> {
 }
 
 fn get_and_create_sqlite_db_path() -> String {
-    let mut path = ProjectDirs::from("dev", "fredol", "open-tv")
-        .unwrap()
-        .data_dir()
-        .to_owned();
+    let mut path = project_dirs().unwrap().data_dir().to_owned();
     if !path.exists() {
         std::fs::create_dir_all(&path).unwrap();
     }

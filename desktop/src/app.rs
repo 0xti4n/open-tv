@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use dioxus::prelude::*;
-use open_tv_lib::types::AppState;
+use nyx_tv_lib::types::AppState;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -48,7 +48,7 @@ pub fn app() -> Element {
         let app_state = app_state.clone();
         let window = window.clone();
         spawn(async move {
-            if let Err(message) = blocking(open_tv_lib::initialize_database).await {
+            if let Err(message) = blocking(nyx_tv_lib::initialize_database).await {
                 report_error(app_data, message.clone());
                 let mut data = app_data.write();
                 data.error = Some(message);
@@ -56,14 +56,14 @@ pub fn app() -> Element {
                 return;
             }
 
-            let settings = match blocking(open_tv_lib::get_settings).await {
+            let settings = match blocking(nyx_tv_lib::get_settings).await {
                 Ok(settings) => Some(settings),
                 Err(message) => {
                     report_error(app_data, message);
                     None
                 }
             };
-            let sources = match blocking(open_tv_lib::get_sources).await {
+            let sources = match blocking(nyx_tv_lib::get_sources).await {
                 Ok(sources) => sources,
                 Err(message) => {
                     report_error(app_data, message);
@@ -83,12 +83,12 @@ pub fn app() -> Element {
                 .as_ref()
                 .is_some_and(|settings| settings.refresh_on_start == Some(true))
                 && !sources.is_empty()
-                && let Err(message) = open_tv_lib::refresh_all().await
+                && let Err(message) = nyx_tv_lib::refresh_all().await
             {
                 report_error(app_data, message);
             }
             if !sources.is_empty()
-                && let Err(message) = open_tv_lib::on_start_check_epg(&app_state).await
+                && let Err(message) = nyx_tv_lib::on_start_check_epg(&app_state).await
             {
                 report_error(app_data, message);
             }

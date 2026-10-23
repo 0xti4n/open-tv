@@ -1,14 +1,12 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use dioxus::prelude::*;
-use open_tv_lib::{source_type, types::Source};
+use nyx_tv_lib::{source_type, types::Source};
 
 use crate::{
     backend::{blocking, notify, report_error},
     components::modals::{
-        dialog::Dialog,
-        edit_channel::EditChannelModal,
-        edit_group::EditGroupModal,
+        dialog::Dialog, edit_channel::EditChannelModal, edit_group::EditGroupModal,
         import_modal::ImportModal,
     },
     state::{AppData, ToastKind},
@@ -49,7 +47,7 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
 
     let refresh_sources = move || {
         spawn(async move {
-            match blocking(open_tv_lib::get_sources).await {
+            match blocking(nyx_tv_lib::get_sources).await {
                 Ok(sources) => app.write().sources = sources,
                 Err(message) => report_error(app, message),
             }
@@ -70,7 +68,7 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                             let source_id = source().id.unwrap_or_default();
                             let enabled = !source().enabled;
                             spawn(async move {
-                                match blocking(move || open_tv_lib::toggle_source(enabled, source_id)).await {
+                                match blocking(move || nyx_tv_lib::toggle_source(enabled, source_id)).await {
                                     Ok(()) => {
                                         source.with_mut(|source| source.enabled = enabled);
                                         notify(app, ToastKind::Success, "Source enabled state updated");
@@ -89,7 +87,7 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                         p { class: "break-all", "URL: {source().url.as_deref().unwrap_or(\"—\")}" }
                     }
                     if kind != source_type::M3U && kind != source_type::CUSTOM {
-                        p { "User-agent: {source().user_agent.as_deref().unwrap_or(\"Fred TV\")}" }
+                        p { "User-agent: {source().user_agent.as_deref().unwrap_or(\"Nyx TV\")}" }
                     }
                     p { "Stream user-agent: {source().stream_user_agent.as_deref().unwrap_or(\"—\")}" }
                     if kind != source_type::CUSTOM {
@@ -178,7 +176,7 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                             loading.set(true);
                             spawn(async move {
                                 let source_to_save = next.clone();
-                                match blocking(move || open_tv_lib::update_source(source_to_save)).await {
+                                match blocking(move || nyx_tv_lib::update_source(source_to_save)).await {
                                     Ok(()) => {
                                         source.set(next.clone());
                                         draft.set(next);
@@ -208,7 +206,7 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                                 let source = source();
                                 loading.set(true);
                                 spawn(async move {
-                                    match open_tv_lib::refresh_source(source).await {
+                                    match nyx_tv_lib::refresh_source(source).await {
                                         Ok(()) => notify(app, ToastKind::Success, "Successfully updated source"),
                                         Err(message) => report_error(app, message),
                                     }
@@ -223,7 +221,7 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                                 if let Some(file) = rfd::AsyncFileDialog::new().add_filter("Favorites backup", &["otvf"]).set_file_name(format!("{}_favs.otvf", source().name)).save_file().await {
                                     let id = source().id.unwrap_or_default();
                                     let path = file.path().to_string_lossy().to_string();
-                                    match blocking(move || open_tv_lib::backup_favs(id, path)).await {
+                                    match blocking(move || nyx_tv_lib::backup_favs(id, path)).await {
                                         Ok(()) => notify(app, ToastKind::Success, "Successfully saved favorites backup"),
                                         Err(message) => report_error(app, message),
                                     }
@@ -237,7 +235,7 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                                 if let Some(file) = rfd::AsyncFileDialog::new().add_filter("Favorites backup", &["otvf"]).pick_file().await {
                                     let id = source().id.unwrap_or_default();
                                     let path = file.path().to_string_lossy().to_string();
-                                    match blocking(move || open_tv_lib::restore_favs(id, path)).await {
+                                    match blocking(move || nyx_tv_lib::restore_favs(id, path)).await {
                                         Ok(()) => notify(app, ToastKind::Success, "Successfully restored favorites backup"),
                                         Err(message) => report_error(app, message),
                                     }
@@ -251,11 +249,11 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                         button {
                             class: "rounded border border-border px-3 py-2 text-sm",
                             onclick: move |_| { spawn(async move {
-                                if let Some(file) = rfd::AsyncFileDialog::new().add_filter("Open TV playlist", &["otvp"]).set_file_name(format!("{}.otvp", source().name)).save_file().await {
+                                if let Some(file) = rfd::AsyncFileDialog::new().add_filter("Nyx TV playlist", &["otvp"]).set_file_name(format!("{}.otvp", source().name)).save_file().await {
                                     let source = source();
                                     let path = file.path().to_string_lossy().to_string();
                                     let export_path = path.clone();
-                                    match blocking(move || open_tv_lib::share_custom_source(source, export_path)).await {
+                                    match blocking(move || nyx_tv_lib::share_custom_source(source, export_path)).await {
                                         Ok(()) => notify(app, ToastKind::Success, format!("Successfully exported source in {path}")),
                                         Err(message) => report_error(app, message),
                                     }
@@ -271,7 +269,7 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                         onclick: move |_| {
                             let id = source().id.unwrap_or_default();
                             spawn(async move {
-                                match blocking(move || open_tv_lib::delete_source(id)).await {
+                                match blocking(move || nyx_tv_lib::delete_source(id)).await {
                                     Ok(()) => {
                                         notify(app, ToastKind::Success, "Successfully deleted source");
                                         refresh_sources();

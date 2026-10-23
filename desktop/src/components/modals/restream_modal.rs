@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use dioxus::prelude::*;
-use open_tv_lib::types::{AppState, Channel, NetworkInfo};
+use nyx_tv_lib::types::{AppState, Channel, NetworkInfo};
 use tokio::sync::Mutex;
 
 use crate::{
@@ -26,7 +26,7 @@ pub fn RestreamModal(open: Signal<bool>, channel: Channel) -> Element {
     use_effect(move || {
         if open() && network().is_none() {
             spawn(async move {
-                match open_tv_lib::get_network_info().await {
+                match nyx_tv_lib::get_network_info().await {
                     Ok(info) => {
                         selected_ip.set(info.local_ips.first().cloned().unwrap_or_default());
                         network.set(Some(info));
@@ -68,7 +68,7 @@ pub fn RestreamModal(open: Signal<bool>, channel: Channel) -> Element {
                                     loading.set(true);
                                     let (sender, receiver) = tokio::sync::oneshot::channel();
                                     let task = tokio::spawn(async move {
-                                        open_tv_lib::start_restream(port, &state, sender, channel).await
+                                        nyx_tv_lib::start_restream(port, &state, sender, channel).await
                                     });
                                     match receiver.await {
                                         Ok(()) => {
@@ -120,7 +120,7 @@ pub fn RestreamModal(open: Signal<bool>, channel: Channel) -> Element {
                                 let state = stop_state.clone();
                                 spawn(async move {
                                     loading.set(true);
-                                    match open_tv_lib::stop_restream(&state).await {
+                                    match nyx_tv_lib::stop_restream(&state).await {
                                         Ok(()) => started.set(false),
                                         Err(message) => report_error(app, message),
                                     }
@@ -137,7 +137,7 @@ pub fn RestreamModal(open: Signal<bool>, channel: Channel) -> Element {
                                 let port = info.port;
                                 spawn(async move {
                                     watching.set(true);
-                                    if let Err(message) = open_tv_lib::watch_self(port, &state).await {
+                                    if let Err(message) = nyx_tv_lib::watch_self(port, &state).await {
                                         report_error(app, message);
                                     }
                                     watching.set(false);
@@ -154,14 +154,14 @@ pub fn RestreamModal(open: Signal<bool>, channel: Channel) -> Element {
                                 spawn(async move {
                                     let filename = format!("{}_rst.otv", channel.name);
                                     if let Some(file) = rfd::AsyncFileDialog::new()
-                                        .add_filter("Open TV channel", &["otv"])
+                                        .add_filter("Nyx TV channel", &["otv"])
                                         .set_file_name(&filename)
                                         .save_file()
                                         .await
                                     {
                                         let path = file.path().to_string_lossy().to_string();
                                         let export_path = path.clone();
-                                        match blocking(move || open_tv_lib::share_restream(ip, channel, export_path)).await {
+                                        match blocking(move || nyx_tv_lib::share_restream(ip, channel, export_path)).await {
                                             Ok(()) => notify(app, ToastKind::Success, format!("Successfully exported re-stream to {path}")),
                                             Err(message) => report_error(app, message),
                                         }

@@ -1,10 +1,13 @@
 use dioxus::prelude::*;
-use open_tv_lib::{source_type, types::Source};
+use nyx_tv_lib::{source_type, types::Source};
 
 use crate::{
     app::Route,
     backend::{blocking, notify, report_error},
-    components::ui::{button::{Button, ButtonVariant}, input::{Input, InputType}},
+    components::ui::{
+        button::{Button, ButtonVariant},
+        input::{Input, InputType},
+    },
     state::{AppData, ToastKind},
 };
 
@@ -38,7 +41,7 @@ pub fn Setup() -> Element {
                 return;
             }
             let name_for_check = name_value.clone();
-            match blocking(move || open_tv_lib::source_name_exists(name_for_check)).await {
+            match blocking(move || nyx_tv_lib::source_name_exists(name_for_check)).await {
                 Ok(true) => {
                     error.set(Some("A source with this name already exists.".to_string()));
                     return;
@@ -66,8 +69,8 @@ pub fn Setup() -> Element {
                 loading.set(true);
                 error.set(None);
                 let custom_name = name_value.clone();
-                match blocking(move || open_tv_lib::add_custom_source(custom_name)).await {
-                    Ok(()) => match blocking(open_tv_lib::get_sources).await {
+                match blocking(move || nyx_tv_lib::add_custom_source(custom_name)).await {
+                    Ok(()) => match blocking(nyx_tv_lib::get_sources).await {
                         Ok(sources) => {
                             app.write().sources = sources;
                             app.write().loaded = true;
@@ -117,25 +120,23 @@ pub fn Setup() -> Element {
             loading.set(true);
             error.set(None);
             let result = match source_kind {
-                0 => blocking(move || open_tv_lib::get_m3u8(source)).await,
-                1 => open_tv_lib::get_m3u8_from_link(source).await,
-                _ => open_tv_lib::get_xtream(source).await,
+                0 => blocking(move || nyx_tv_lib::get_m3u8(source)).await,
+                1 => nyx_tv_lib::get_m3u8_from_link(source).await,
+                _ => nyx_tv_lib::get_xtream(source).await,
             };
             match result {
-                Ok(()) => {
-                    match blocking(open_tv_lib::get_sources).await {
-                        Ok(sources) => {
-                            app.write().sources = sources;
-                            app.write().loaded = true;
-                            notify(app, ToastKind::Success, "Source added successfully");
-                            navigator.replace(Route::Home {});
-                        }
-                        Err(message) => {
-                            report_error(app, message.clone());
-                            error.set(Some(message));
-                        }
+                Ok(()) => match blocking(nyx_tv_lib::get_sources).await {
+                    Ok(sources) => {
+                        app.write().sources = sources;
+                        app.write().loaded = true;
+                        notify(app, ToastKind::Success, "Source added successfully");
+                        navigator.replace(Route::Home {});
                     }
-                }
+                    Err(message) => {
+                        report_error(app, message.clone());
+                        error.set(Some(message));
+                    }
+                },
                 Err(message) => {
                     report_error(app, message.clone());
                     error.set(Some(message));

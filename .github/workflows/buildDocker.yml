@@ -14,7 +14,7 @@ jobs:
       packages: write
 
     env:
-      IMAGE_NAME: open-tv
+      IMAGE_NAME: nyx-tv
 
     steps:
       - name: Checkout repository
@@ -36,5 +36,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/fredolx/open-tv:latest
-            ghcr.io/fredolx/open-tv:${{ github.sha }}
+            ghcr.io/0xti4n/nyx-tv:latest
+            ghcr.io/0xti4n/nyx-tv:${{ github.sha }}
