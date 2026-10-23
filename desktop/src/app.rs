@@ -7,11 +7,8 @@ use tokio::sync::Mutex;
 use crate::{
     backend::{app_data_dir, blocking, report_error},
     components::{
-        modals::error_modal::ErrorModal,
-        modals::whats_new_modal::WhatsNewModal,
-        download_manager::DownloadManager,
-        tray::TrayIntegration,
-        toasts::Toasts,
+        download_manager::DownloadManager, modals::error_modal::ErrorModal,
+        modals::whats_new_modal::WhatsNewModal, toasts::Toasts, tray::TrayIntegration,
     },
     state::AppData,
     views::{home::Home, settings::Settings, setup::Setup},
@@ -26,6 +23,19 @@ pub enum Route {
     #[route("/settings")]
     Settings {},
 }
+
+const GEIST: Asset = asset!(
+    "/assets/fonts/Geist-VariableFont_wght.ttf",
+    AssetOptions::builder().with_hash_suffix(false)
+);
+const GEIST_ITALIC: Asset = asset!(
+    "/assets/fonts/Geist-Italic-VariableFont_wght.ttf",
+    AssetOptions::builder().with_hash_suffix(false)
+);
+const OXANIUM: Asset = asset!(
+    "/assets/fonts/Oxanium-VariableFont_wght.ttf",
+    AssetOptions::builder().with_hash_suffix(false)
+);
 
 pub fn app() -> Element {
     let mut app_data = use_context_provider(|| Signal::new(AppData::default()));
@@ -100,6 +110,9 @@ pub fn app() -> Element {
     });
 
     rsx! {
+        for font in [GEIST, GEIST_ITALIC, OXANIUM] {
+            document::Link { rel: "preload", href: font, r#as: "font", r#type: "font/ttf", crossorigin: "anonymous" }
+        }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
         div { class: "dark min-h-screen bg-background text-foreground",
             Router::<Route> {}

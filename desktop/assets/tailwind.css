@@ -3,8 +3,6 @@
 @layer theme, base, components, utilities;
 @layer theme {
   :root, :host {
-    --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-    'Noto Color Emoji';
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
     --color-amber-400: oklch(82.8% 0.189 84.429);
@@ -39,7 +37,7 @@
     --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     --default-transition-duration: 150ms;
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    --default-font-family: var(--font-sans);
+    --default-font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
     --default-mono-font-family: var(--font-mono);
   }
 }
@@ -588,13 +586,13 @@
     border-radius: var(--radius);
   }
   .rounded-md {
-    border-radius: calc(var(--radius) - 2px);
+    border-radius: max(0px, calc(var(--radius) - 2px));
   }
   .rounded-none {
     border-radius: 0;
   }
   .rounded-sm {
-    border-radius: calc(var(--radius) - 4px);
+    border-radius: max(0px, calc(var(--radius) - 4px));
   }
   .rounded-xl {
     border-radius: calc(var(--radius) + 4px);
@@ -809,7 +807,7 @@
     text-align: right;
   }
   .font-sans {
-    font-family: var(--font-sans);
+    font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
   }
   .text-2xl {
     font-size: var(--text-2xl);
@@ -1225,14 +1223,14 @@
   }
   .first\:rounded-t-md {
     &:first-child {
-      border-top-left-radius: calc(var(--radius) - 2px);
-      border-top-right-radius: calc(var(--radius) - 2px);
+      border-top-left-radius: max(0px, calc(var(--radius) - 2px));
+      border-top-right-radius: max(0px, calc(var(--radius) - 2px));
     }
   }
   .first\:rounded-l-md {
     &:first-child {
-      border-top-left-radius: calc(var(--radius) - 2px);
-      border-bottom-left-radius: calc(var(--radius) - 2px);
+      border-top-left-radius: max(0px, calc(var(--radius) - 2px));
+      border-bottom-left-radius: max(0px, calc(var(--radius) - 2px));
     }
   }
   .first\:border-t {
@@ -1254,14 +1252,14 @@
   }
   .last\:rounded-r-md {
     &:last-child {
-      border-top-right-radius: calc(var(--radius) - 2px);
-      border-bottom-right-radius: calc(var(--radius) - 2px);
+      border-top-right-radius: max(0px, calc(var(--radius) - 2px));
+      border-bottom-right-radius: max(0px, calc(var(--radius) - 2px));
     }
   }
   .last\:rounded-b-md {
     &:last-child {
-      border-bottom-right-radius: calc(var(--radius) - 2px);
-      border-bottom-left-radius: calc(var(--radius) - 2px);
+      border-bottom-right-radius: max(0px, calc(var(--radius) - 2px));
+      border-bottom-left-radius: max(0px, calc(var(--radius) - 2px));
     }
   }
   .read-only\:bg-muted {
@@ -1571,7 +1569,7 @@
   }
   .has-\[\>\[data-name\=Field\]\]\:rounded-md {
     &:has(>[data-name=Field]) {
-      border-radius: calc(var(--radius) - 2px);
+      border-radius: max(0px, calc(var(--radius) - 2px));
     }
   }
   .has-\[\>\[data-name\=Field\]\]\:border {
@@ -1753,12 +1751,12 @@
     }
   }
   .dark\:border-input {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       border-color: var(--input);
     }
   }
   .dark\:bg-destructive\/60 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       background-color: var(--destructive);
       @supports (color: color-mix(in lab, red, red)) {
         background-color: color-mix(in oklab, var(--destructive) 60%, transparent);
@@ -1766,7 +1764,7 @@
     }
   }
   .dark\:bg-input\/30 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       background-color: var(--input);
       @supports (color: color-mix(in lab, red, red)) {
         background-color: color-mix(in oklab, var(--input) 30%, transparent);
@@ -1774,7 +1772,7 @@
     }
   }
   .dark\:hover\:bg-accent\/50 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       &:hover {
         @media (hover: hover) {
           background-color: var(--accent);
@@ -1786,7 +1784,7 @@
     }
   }
   .dark\:hover\:bg-input\/5 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       &:hover {
         @media (hover: hover) {
           background-color: var(--input);
@@ -1798,7 +1796,7 @@
     }
   }
   .dark\:focus-visible\:ring-destructive\/40 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       &:focus-visible {
         --tw-ring-color: var(--destructive);
         @supports (color: color-mix(in lab, red, red)) {
@@ -1808,7 +1806,7 @@
     }
   }
   .dark\:has-data-\[state\=checked\]\:bg-primary\/10 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       &:has(*[data-state="checked"]) {
         background-color: var(--primary);
         @supports (color: color-mix(in lab, red, red)) {
@@ -1818,7 +1816,7 @@
     }
   }
   .dark\:has-\[\:checked\]\:bg-primary\/10 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       &:has(*:is(:checked)) {
         background-color: var(--primary);
         @supports (color: color-mix(in lab, red, red)) {
@@ -1828,7 +1826,7 @@
     }
   }
   .dark\:aria-invalid\:ring-destructive\/40 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       &[aria-invalid="true"] {
         --tw-ring-color: var(--destructive);
         @supports (color: color-mix(in lab, red, red)) {
@@ -1838,7 +1836,7 @@
     }
   }
   .dark\:data-\[state\=checked\]\:bg-primary {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       &[data-state="checked"] {
         background-color: var(--primary);
       }
@@ -1967,7 +1965,7 @@
     }
   }
   .dark\:\[\[data-slot\=tooltip-content\]_\&\]\:bg-background\/10 {
-    @media (prefers-color-scheme: dark) {
+    &:is(.dark *) {
       [data-slot=tooltip-content] & {
         background-color: var(--background);
         @supports (color: color-mix(in lab, red, red)) {
@@ -1982,34 +1980,104 @@
     }
   }
 }
+@font-face {
+  font-family: "Geist";
+  src: url("/assets/Geist-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/assets/Geist-Italic-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Oxanium";
+  src: url("/assets/Oxanium-VariableFont_wght.ttf") format("truetype");
+  font-weight: 200 800;
+  font-style: normal;
+}
 :root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.496 0.265 301.924);
+  --primary-foreground: oklch(0.977 0.014 308.299);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.827 0.119 306.383);
+  --chart-2: oklch(0.627 0.265 303.9);
+  --chart-3: oklch(0.558 0.288 302.321);
+  --chart-4: oklch(0.496 0.265 301.924);
+  --chart-5: oklch(0.438 0.218 303.724);
+  --radius: 0rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.558 0.288 302.321);
+  --sidebar-primary-foreground: oklch(0.977 0.014 308.299);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+.dark {
   color-scheme: dark;
-  --background: oklch(0.18 0 0);
+  --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.269 0 0);
+  --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.15 245);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: oklch(0.438 0.218 303.724);
+  --primary-foreground: oklch(0.977 0.014 308.299);
+  --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.371 0 0);
+  --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --radius: 0.625rem;
+  --chart-1: oklch(0.827 0.119 306.383);
+  --chart-2: oklch(0.627 0.265 303.9);
+  --chart-3: oklch(0.558 0.288 302.321);
+  --chart-4: oklch(0.496 0.265 301.924);
+  --chart-5: oklch(0.438 0.218 303.724);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.627 0.265 303.9);
+  --sidebar-primary-foreground: oklch(0.977 0.014 308.299);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 html, body, #main {
   min-height: 100%;
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: oklch(0.145 0 0);
+  color: oklch(0.985 0 0);
+  font-family: "Geist", ui-sans-serif, system-ui, sans-serif;
+}
+.dark {
+  accent-color: var(--primary);
+}
+h1, h2, h3 {
+  font-family: "Oxanium", "Geist", ui-sans-serif, sans-serif;
 }
 @property --tw-space-y-reverse {
   syntax: "*";
