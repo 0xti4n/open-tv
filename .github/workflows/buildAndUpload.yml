@@ -11,6 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-22.04, windows-latest]
 
@@ -19,12 +20,18 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Install cargo-binstall
+        if: matrix.os == 'windows-latest'
         shell: bash
         run: cargo install cargo-binstall --locked
 
       - name: Install Dioxus CLI 0.7.10
         shell: bash
-        run: cargo binstall dioxus-cli@0.7.10 -y || cargo install dioxus-cli --version 0.7.10 --locked
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-22.04" ]]; then
+            cargo install dioxus-cli --version 0.7.10 --locked
+          else
+            cargo binstall dioxus-cli@0.7.10 -y || cargo install dioxus-cli --version 0.7.10 --locked
+          fi
 
       - name: Download mpv
         if: matrix.os == 'windows-latest'
