@@ -11,6 +11,7 @@ pub fn TrayIntegration() -> Element {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         let window = dioxus::desktop::use_window();
+        let effect_window = window.clone();
         let mut initialized = use_signal(|| false);
 
         use_effect(move || {
@@ -21,7 +22,8 @@ pub fn TrayIntegration() -> Element {
                 .and_then(|settings| settings.enable_tray_icon)
                 .unwrap_or(true);
             if enabled {
-                window.set_close_behavior(dioxus::desktop::WindowCloseBehaviour::WindowHides);
+                effect_window
+                    .set_close_behavior(dioxus::desktop::WindowCloseBehaviour::WindowHides);
                 if !initialized() {
                     use dioxus::desktop::muda::{Menu, MenuItem};
                     let menu = Menu::new();
@@ -32,7 +34,8 @@ pub fn TrayIntegration() -> Element {
                     initialized.set(true);
                 }
             } else {
-                window.set_close_behavior(dioxus::desktop::WindowCloseBehaviour::WindowCloses);
+                effect_window
+                    .set_close_behavior(dioxus::desktop::WindowCloseBehaviour::WindowCloses);
             }
         });
 
