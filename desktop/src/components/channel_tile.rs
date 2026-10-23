@@ -60,7 +60,8 @@ pub fn ChannelTile(
         .sources
         .iter()
         .any(|source| source.id == channel.source_id && source.source_type == 3);
-    let can_epg = channel.media_type == media_type::LIVESTREAM
+    let can_epg = !custom_source
+        && channel.media_type == media_type::LIVESTREAM
         && app.read().sources.iter().any(|source| {
             source.id == channel.source_id && source.source_type == open_tv_lib::source_type::XTREAM
         });
@@ -238,45 +239,76 @@ pub fn ChannelTile(
                                 let id = download_id_for_download.clone();
                                 let mut app = app;
                                 spawn(async move {
-                                    if let Some(file) = rfd::AsyncFileDialog::new()
-                                        .add_filter("MP4 video", &["mp4"])
-                                        .set_file_name(format!("{}.mp4", channel.name))
-                                        .save_file().await
-                                    {
-                                        let path = file.path().to_string_lossy().to_string();
-                                        let source_id = channel.source_id.unwrap_or_default();
-                                        app.write().downloads.push(ActiveDownload {
-                                            id: id.clone(),
-                                            source_id,
-                                            name: channel.name.clone(),
-                                            progress: 0.0,
-                                        });
-                                        let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
-                                        let task_state = state.clone();
-                                        let task_id = id.clone();
-                                        let task = tokio::spawn(async move {
-                                            open_tv_lib::download(&task_state, sender, channel, task_id, Some(path)).await
-                                        });
-                                        while let Some(progress) = receiver.recv().await {
-                                            if let Some(download) = app.write().downloads.iter_mut()
-                                                .find(|download| download.id == id)
-                                            {
-                                                download.progress = progress;
-                                            }
+                                    let is_container = match open_tv_lib::is_container() {
+                                        Ok(is_container) => is_container,
+                                        Err(message) => {
+                                            report_error(app, message);
+                                            return;
                                         }
-                                        match task.await {
-                                            Ok(Ok(())) => notify(app, ToastKind::Success, "Download completed"),
-                                            Ok(Err(message)) => report_error(app, message),
-                                            Err(error) => report_error(app, format!("Download task failed: {error}")),
+                                    };
+                                    let always_ask_save = app
+                                        .read()
+                                        .settings
+                                        .as_ref()
+                                        .and_then(|settings| settings.always_ask_save)
+                                        .unwrap_or(false);
+                                    let path = if is_container || always_ask_save {
+                                        let default_name = format!(
+                                            "{}.{}",
+                                            sanitize_file_name(&channel.name),
+                                            extension_from_url(channel.url.as_deref().unwrap_or(""))
+                                        );
+                                        let Some(file) = rfd::AsyncFileDialog::new()
+                                            .set_file_name(default_name)
+                                            .save_file()
+                                            .await
+                                        else {
+                                            return;
+                                        };
+                                        Some(file.path().to_string_lossy().to_string())
+                                    } else {
+                                        None
+                                    };
+                                    let source_id = channel.source_id.unwrap_or_default();
+                                    app.write().downloads.push(ActiveDownload {
+                                        id: id.clone(),
+                                        source_id,
+                                        name: channel.name.clone(),
+                                        progress: 0.0,
+                                    });
+                                    let (sender, mut receiver) =
+                                        tokio::sync::mpsc::unbounded_channel();
+                                    let task_state = state.clone();
+                                    let task_id = id.clone();
+                                    let task = tokio::spawn(async move {
+                                        open_tv_lib::download(
+                                            &task_state,
+                                            sender,
+                                            channel,
+                                            task_id,
+                                            path,
+                                        )
+                                        .await
+                                    });
+                                    while let Some(progress) = receiver.recv().await {
+                                        if let Some(download) = app.write().downloads.iter_mut()
+                                            .find(|download| download.id == id)
+                                        {
+                                            download.progress = progress;
                                         }
-                                        app.write().downloads.retain(|download| download.id != id);
                                     }
+                                    match task.await {
+                                        Ok(Ok(())) => notify(app, ToastKind::Success, "Download completed"),
+                                        Ok(Err(message)) => report_error(app, message),
+                                        Err(error) => report_error(app, format!("Download task failed: {error}")),
+                                    }
+                                    app.write().downloads.retain(|download| download.id != id);
                                 });
                             },
                             "Download"
                         }
                     }
-                    if downloading {
+                    if channel.media_type == media_type::MOVIE && downloading {
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm text-destructive hover:bg-accent",
                             onclick: move |_| {
@@ -333,9 +365,6 @@ pub fn ChannelTile(
                             },
                             "Share"
                         }
-                        if channel.media_type == media_type::LIVESTREAM {
-                            button { class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent", onclick: move |_| { menu_position.set(None); restream_open.set(true); }, "Re-stream" }
-                        }
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm text-destructive hover:bg-accent",
                             onclick: move |_| {
@@ -352,6 +381,16 @@ pub fn ChannelTile(
                                 }
                             },
                             "Delete"
+                        }
+                    }
+                    if channel.media_type == media_type::LIVESTREAM {
+                        button {
+                            class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
+                            onclick: move |_| {
+                                menu_position.set(None);
+                                restream_open.set(true);
+                            },
+                            "Re-stream"
                         }
                     }
                     if !matches!(channel.media_type, media_type::GROUP | media_type::SEASON) {
@@ -388,6 +427,41 @@ pub fn ChannelTile(
                 DeleteGroupModal { open: delete_group_open, group: channel.clone() }
             }
         }
+    }
+}
+
+fn sanitize_file_name(file_name: &str) -> String {
+    let sanitized = file_name
+        .chars()
+        .filter(|character| {
+            let code = *character as u32;
+            !(code <= 0x1f || code == 0x7f)
+        })
+        .map(|character| {
+            if r#"/\:*?"<>|"#.contains(character) {
+                '_'
+            } else {
+                character
+            }
+        })
+        .collect::<String>();
+    let sanitized = sanitized
+        .trim_start_matches('.')
+        .trim_end_matches('.')
+        .trim();
+    if sanitized.is_empty() {
+        "untitled".to_string()
+    } else {
+        sanitized.to_string()
+    }
+}
+
+fn extension_from_url(url: &str) -> String {
+    let extension = url.rsplit('.').next().unwrap_or_default();
+    if !url.contains('.') || extension.starts_with("php?") {
+        "mp4".to_string()
+    } else {
+        extension.to_string()
     }
 }
 

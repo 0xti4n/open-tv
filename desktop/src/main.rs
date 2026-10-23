@@ -23,12 +23,14 @@ fn main() {
         .with_resizable(true)
         .with_window_icon(Some(icon));
 
+    let config = dioxus::desktop::Config::new()
+        .with_window(window)
+        .with_disable_context_menu(true)
+        .with_tray_icon_show_window_on_click(true);
+    #[cfg(not(target_os = "macos"))]
+    let config = config.with_menu(None);
+
     dioxus::LaunchBuilder::desktop()
-        .with_cfg(
-            dioxus::desktop::Config::new()
-                .with_window(window)
-                .with_disable_context_menu(true)
-                .with_tray_icon_show_window_on_click(true),
-        )
+        .with_cfg(config)
         .launch(app::app);
 }

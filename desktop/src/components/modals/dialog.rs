@@ -22,6 +22,13 @@ pub fn Dialog(open: Signal<bool>, children: Element) -> Element {
                 class: "relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-xl",
                 role: "dialog",
                 "aria-modal": "true",
+                tabindex: -1,
+                onmounted: move |event| {
+                    let mounted = event.data().clone();
+                    spawn(async move {
+                        let _ = mounted.set_focus(true).await;
+                    });
+                },
                 onclick: move |event| event.stop_propagation(),
                 {children}
             }

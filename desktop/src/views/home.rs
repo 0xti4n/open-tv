@@ -25,6 +25,12 @@ fn focus_element(id: String, scroll_to_top: bool) {
     });
 }
 
+fn clear_search_input() {
+    spawn(async {
+        let _ = document::eval("document.getElementById('search').value=''").await;
+    });
+}
+
 #[component]
 pub fn Home() -> Element {
     let app = use_context::<Signal<AppData>>();
@@ -273,6 +279,7 @@ pub fn Home() -> Element {
                         focus_element("channel-tile-0".to_string(), true);
                     } else if !query().is_empty() {
                         query.set(String::new());
+                        clear_search_input();
                         page.set(1);
                         selected_index.set(0);
                         focus_element("channel-tile-0".to_string(), true);
@@ -363,7 +370,6 @@ pub fn Home() -> Element {
                             r#type: InputType::Search,
                             id: Some("search".to_string()),
                             placeholder: Some("Search channels".to_string()),
-                            value: Some(query()),
                             onfocus: move |_| search_focused.set(true),
                             onblur: move |_| search_focused.set(false),
                             oninput: move |event: FormEvent| {

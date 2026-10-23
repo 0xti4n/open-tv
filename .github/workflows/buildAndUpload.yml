@@ -108,12 +108,19 @@ jobs:
         run: |
           dx bundle --platform desktop --release --package-types msi
 
-      - name: Build DEB and RPM
+      - name: Build DEB
+        if: matrix.os == 'ubuntu-22.04'
+        working-directory: desktop
+        run: dx bundle --platform desktop --release --package-types deb
+
+      - name: Build RPM
         if: matrix.os == 'ubuntu-22.04'
         working-directory: desktop
         run: |
-          dx bundle --platform desktop --release --package-types deb --package-types rpm
-          
+          # Dioxus reuses bundle.deb.depends for RPM Requires, so replace Debian package names.
+          python3 -c 'from pathlib import Path; import re; p=Path("Dioxus.toml"); s=p.read_text(); pattern=r"(?ms)(^\[bundle\.deb\]\s*\n.*?^depends\s*=\s*)\[[^\]]*\]"; s,n=re.subn(pattern, lambda match: match.group(1) + "[\"mpv\", \"ffmpeg\", \"yt-dlp\", \"webkit2gtk4.1\", \"gtk3\", \"libxdo\"]", s); assert n == 1; p.write_text(s)'
+          dx bundle --platform desktop --release --package-types rpm
+
       - name: Upload MSI
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
