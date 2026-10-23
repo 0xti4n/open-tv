@@ -21,8 +21,6 @@ use crate::{
 
 static NAME_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"tvg-name="(?P<name>[^"]*)""#).unwrap());
-static NAME_REGEX_ALT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#",(?P<name>[^\n\r\t]*)"#).unwrap());
 static ID_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"tvg-id="(?P<id>[^"]*)""#).unwrap());
 static LOGO_REGEX: LazyLock<Regex> =
@@ -36,6 +34,19 @@ static HTTP_REFERRER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"http-referrer=(?P<referrer>.+)"#).unwrap());
 static HTTP_USER_AGENT_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"http-user-agent=(?P<user_agent>.+)"#).unwrap());
+
+fn alternative_name(line: &str) -> Option<String> {
+    let mut in_quotes = false;
+    for (index, character) in line.char_indices() {
+        if character == '"' {
+            in_quotes = !in_quotes;
+        } else if character == ',' && !in_quotes {
+            let name = line[index + 1..].trim();
+            return (!name.is_empty()).then(|| name.to_string());
+        }
+    }
+    None
+}
 
 struct M3UProcessing {
     channel_line: Option<String>,
@@ -249,11 +260,7 @@ fn get_channel_from_lines(
                     .captures(&first)
                     .and_then(extract_non_empty_capture)
             };
-            let name_alt = || {
-                NAME_REGEX_ALT
-                    .captures(&first)
-                    .and_then(extract_non_empty_capture)
-            };
+            let name_alt = || alternative_name(&first);
             if let Some(true) = use_tvg_id {
                 return id().or(name_alt());
             } else {
@@ -320,5 +327,19 @@ mod test_m3u {
         assert!(get_channel_from_lines(r#"#EXTINF:-1 tvg-id="Id Of Channel" tvg-name="Name Of Channel" tvg-logo="http://myurl.local/amazing/stuff.png" group-title="|EU| FRANCE HEVC",Alt Name Of Channel"#.to_string(), "http://myurl.local/1111/1111.ts".to_string(), 0, Some(true)).unwrap().name == "Name Of Channel");
         assert!(get_channel_from_lines(r#"#EXTINF:-1 tvg-id="Id Of Channel" tvg-name="" tvg-logo="http://myurl.local/amazing/stuff.png" group-title="|EU| FRANCE HEVC",Alt Name Of Channel"#.to_string(), "http://myurl.local/1111/1111.ts".to_string(), 0, Some(true)).unwrap().name == "Id Of Channel");
         assert!(get_channel_from_lines(r#"#EXTINF:-1 tvg-id="Id Of Channel" tvg-name="" tvg-logo="http://myurl.local/amazing/stuff.png" group-title="|EU| FRANCE HEVC",Alt Name Of Channel"#.to_string(), "http://myurl.local/1111/1111.ts".to_string(), 0, Some(false)).unwrap().name == "Alt Name Of Channel");
+    }
+
+    #[test]
+    fn parses_name_after_commas_in_quoted_attributes() {
+        let channel = get_channel_from_lines(
+            r#"#EXTINF:-1 tvg-id="TNTLatinAmerica.us@South" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/TNT_Logo_2016.svg/960px-TNT_Logo_2016.svg.png" http-user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 VLC/3.0.18 LibVLC/3.0.18" group-title="Undefined",TNT Latin America South"#.to_string(),
+            "https://example.test/tnt.m3u8".to_string(),
+            0,
+            Some(false),
+        )
+        .unwrap();
+
+        assert_eq!(channel.name, "TNT Latin America South");
+        assert_eq!(channel.group.as_deref(), Some("Undefined"));
     }
 }

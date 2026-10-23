@@ -43,6 +43,8 @@ fn clear_search_input() {
 #[component]
 pub fn Home() -> Element {
     let app = use_context::<Signal<AppData>>();
+    let loaded = use_memo(move || app.read().loaded);
+    let mut open_context_menu_owner = use_context::<Signal<Option<u64>>>();
     let mut zoom = use_context::<Signal<f64>>();
     let window = dioxus::desktop::use_window();
     let navigator = use_navigator();
@@ -75,6 +77,8 @@ pub fn Home() -> Element {
     let mut sort_menu = use_signal(|| false);
     let mut request_number = use_signal(|| 0_u64);
     let mut refresh_number = use_signal(|| 0_u64);
+    let last_loaded_page = use_signal(|| 0_u8);
+    let last_loaded_request = use_signal(|| None::<(Filters, u64)>);
 
     use_effect(move || {
         let data = app.read();
@@ -101,9 +105,8 @@ pub fn Home() -> Element {
     });
 
     use_effect(move || {
-        let _ = refresh_number();
-        let data = app.read();
-        if !data.loaded {
+        let current_refresh = refresh_number();
+        if !loaded() {
             return;
         }
         let current_query = query();
@@ -124,6 +127,16 @@ pub fn Home() -> Element {
             request_filters.page = 1;
         }
         let page_for_request = request_filters.page;
+        let mut request_context = request_filters.clone();
+        request_context.page = 1;
+        let append_page = page_for_request > 1
+            && page_for_request == last_loaded_page.peek().saturating_add(1)
+            && last_loaded_request
+                .peek()
+                .as_ref()
+                .is_some_and(|(filters, refresh)| {
+                    filters == &request_context && *refresh == current_refresh
+                });
         let current_request = request_number.with_mut(|number| {
             *number += 1;
             *number
@@ -132,6 +145,8 @@ pub fn Home() -> Element {
         let mut error = error;
         let mut channels = channels;
         let mut has_more = has_more;
+        let mut last_loaded_page = last_loaded_page;
+        let mut last_loaded_request = last_loaded_request;
         let request_number = request_number;
         let delay = !current_query.is_empty();
         loading.set(true);
@@ -145,38 +160,64 @@ pub fn Home() -> Element {
             }
             if request_filters.source_ids.is_empty() {
                 channels.set(Vec::new());
+                last_loaded_page.set(0);
+                last_loaded_request.set(None);
                 has_more.set(false);
                 loading.set(false);
                 return;
             }
-            match blocking(move || nyx_tv_lib::search(request_filters)).await {
-                Ok(results) => {
-                    if request_number() != current_request {
+            let pages = if append_page {
+                vec![page_for_request]
+            } else {
+                (1..=page_for_request).collect()
+            };
+            let mut results = Vec::new();
+            let mut has_more_results = false;
+            for request_page in pages {
+                if request_number() != current_request {
+                    return;
+                }
+                request_filters.page = request_page;
+                match blocking({
+                    let filters = request_filters.clone();
+                    move || nyx_tv_lib::search(filters)
+                })
+                .await
+                {
+                    Ok(page_results) => {
+                        has_more_results = page_results.len() == PAGE_SIZE;
+                        results.extend(page_results);
+                    }
+                    Err(message) => {
+                        report_error(app, message.clone());
+                        error.set(Some(message));
+                        if page_for_request == 1 {
+                            channels.set(Vec::new());
+                        }
+                        has_more.set(false);
+                        loading.set(false);
                         return;
                     }
-                    has_more.set(results.len() == PAGE_SIZE);
-                    channels.with_mut(|current| {
-                        if page_for_request == 1 {
-                            *current = results;
-                        } else {
-                            current.extend(results);
-                        }
-                    });
-                }
-                Err(message) => {
-                    report_error(app, message.clone());
-                    error.set(Some(message));
-                    if page_for_request == 1 {
-                        channels.set(Vec::new());
-                    }
-                    has_more.set(false);
                 }
             }
+            if request_number() != current_request {
+                return;
+            }
+            has_more.set(has_more_results);
+            channels.with_mut(|current| {
+                if append_page {
+                    current.extend(results);
+                } else {
+                    *current = results;
+                }
+            });
+            last_loaded_page.set(page_for_request);
+            last_loaded_request.set(Some((request_context, current_refresh)));
             loading.set(false);
         });
     });
 
-    if !app.read().loaded {
+    if !loaded() {
         return rsx! { div { class: "grid min-h-screen place-items-center", Spinner {} } };
     }
 
@@ -562,6 +603,7 @@ pub fn Home() -> Element {
                     id: "channel-grid",
                     class: "grid auto-rows-max max-h-[calc(100vh-19rem)] min-h-48 flex-1 grid-cols-[repeat(auto-fill,minmax(155px,1fr))] content-start gap-3 overflow-y-auto",
                     onscroll: move |event| {
+                        open_context_menu_owner.set(None);
                         let scroll = event.data();
                         let threshold = (scroll.scroll_top() + f64::from(scroll.client_height()))
                             >= f64::from(scroll.scroll_height()) * 0.75;

@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
 
 use dioxus::prelude::*;
 use nyx_tv_lib::{
@@ -16,6 +19,16 @@ use crate::{
     state::{ActiveDownload, AppData, ToastKind},
 };
 
+static NEXT_CONTEXT_MENU_ID: AtomicU64 = AtomicU64::new(1);
+
+fn close_context_menu(
+    mut menu_position: Signal<Option<(f64, f64)>>,
+    mut open_context_menu_owner: Signal<Option<u64>>,
+) {
+    menu_position.set(None);
+    open_context_menu_owner.set(None);
+}
+
 #[component]
 pub fn ChannelTile(
     channel: Channel,
@@ -28,6 +41,8 @@ pub fn ChannelTile(
 ) -> Element {
     let app_state = use_context::<Arc<Mutex<AppState>>>();
     let app = use_context::<Signal<AppData>>();
+    let mut open_context_menu_owner = use_context::<Signal<Option<u64>>>();
+    let menu_id = use_hook(|| NEXT_CONTEXT_MENU_ID.fetch_add(1, Ordering::Relaxed));
     let starting = use_signal(|| false);
     let mut logo_failed = use_signal(|| false);
     let mut menu_position = use_signal(|| None::<(f64, f64)>);
@@ -89,9 +104,13 @@ pub fn ChannelTile(
             tabindex: 0,
             oncontextmenu: move |event| {
                 event.prevent_default();
+                event.stop_propagation();
                 if channel_context.media_type != media_type::SEASON {
                     let point = event.client_coordinates();
+                    open_context_menu_owner.set(Some(menu_id));
                     menu_position.set(Some((point.x, point.y)));
+                } else {
+                    close_context_menu(menu_position, open_context_menu_owner);
                 }
             },
             onfocus: move |_| on_select.call(index),
@@ -106,7 +125,11 @@ pub fn ChannelTile(
                 );
             },
             onkeydown: move |event| {
-                if event.key() == Key::Enter
+                if event.key() == Key::Escape {
+                    event.prevent_default();
+                    event.stop_propagation();
+                    close_context_menu(menu_position, open_context_menu_owner);
+                } else if event.key() == Key::Enter
                     || matches!(event.key(), Key::Character(character) if character == " ")
                 {
                     event.prevent_default();
@@ -140,7 +163,8 @@ pub fn ChannelTile(
                 h2 { class: "truncate text-sm font-medium", title: "{name}", "{name}" }
                 p { class: "mt-1 truncate text-xs text-muted-foreground", "{source_name.as_deref().or(channel.group.as_deref()).unwrap_or(\"Live TV\")}" }
             }
-            if let Some((x, y)) = menu_position() {
+            if open_context_menu_owner() == Some(menu_id) {
+                if let Some((x, y)) = menu_position() {
                 div {
                     class: "fixed z-[100] min-w-48 rounded-md border border-border bg-card p-1 shadow-xl",
                     style: "left: {x}px; top: {y}px;",
@@ -149,7 +173,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 let Some(id) = channel_history.id else { return; };
                                 let channel_name = channel_history.name.clone();
                                 spawn(async move {
@@ -166,7 +190,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 let Some(id) = channel.id else { return; };
                                 let was_favorite = favorite();
                                 spawn(async move {
@@ -191,7 +215,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 let Some(id) = channel.id else { return; };
                                 let is_group = channel.media_type == media_type::GROUP;
                                 let hide = !hidden();
@@ -217,7 +241,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 let channel = channel_record.clone();
                                 let app_state = state_record.clone();
                                 spawn(async move {
@@ -241,7 +265,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 let channel = channel_download.clone();
                                 let state = state_download.clone();
                                 let id = download_id_for_download.clone();
@@ -320,7 +344,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm text-destructive hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 let state = state_cancel_download.clone();
                                 let id = download_id_for_cancel.clone();
                                 let source_id = channel_context.source_id.unwrap_or_default();
@@ -337,7 +361,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 let channel = channel_epg.clone();
                                 spawn(async move {
                                     match nyx_tv_lib::get_epg(channel).await {
@@ -351,11 +375,11 @@ pub fn ChannelTile(
                         }
                     }
                     if custom_source {
-                        button { class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent", onclick: move |_| { menu_position.set(None); edit_open.set(true); }, "Edit" }
+                        button { class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent", onclick: move |_| { close_context_menu(menu_position, open_context_menu_owner); edit_open.set(true); }, "Edit" }
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 let channel = channel_share.clone();
                                 spawn(async move {
                                     if let Some(file) = rfd::AsyncFileDialog::new()
@@ -376,7 +400,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm text-destructive hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 if channel_delete.media_type == media_type::GROUP {
                                     delete_group_open.set(true);
                                 } else if let Some(id) = channel_delete.id {
@@ -395,7 +419,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 restream_open.set(true);
                             },
                             "Re-stream"
@@ -405,7 +429,7 @@ pub fn ChannelTile(
                         button {
                             class: "block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent",
                             onclick: move |_| {
-                                menu_position.set(None);
+                                close_context_menu(menu_position, open_context_menu_owner);
                                 if let Some(url) = channel_copy.url.clone() {
                                     spawn(async move {
                                         match blocking(move || {
@@ -420,6 +444,7 @@ pub fn ChannelTile(
                             "Copy URL"
                         }
                     }
+                }
                 }
             }
             Dialog { open: epg_open,

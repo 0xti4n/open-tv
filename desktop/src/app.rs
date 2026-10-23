@@ -40,9 +40,27 @@ const OXANIUM: Asset = asset!(
 pub fn app() -> Element {
     let mut app_data = use_context_provider(|| Signal::new(AppData::default()));
     let app_state = use_context_provider(|| Arc::new(Mutex::new(AppState::default())));
+    let mut open_context_menu_owner = use_context_provider(|| Signal::new(None::<u64>));
     let mut zoom = use_context_provider(|| Signal::new(1.0_f64));
     let mut whats_new_open = use_signal(|| false);
     let window = dioxus::desktop::use_window();
+
+    use_effect(move || {
+        let mut eval = document::eval(
+            r#"
+document.addEventListener("keydown", async event => {
+    if (event.key === "Escape") {
+        await dioxus.send(true);
+    }
+});
+"#,
+        );
+        spawn(async move {
+            while eval.recv::<bool>().await.is_ok() {
+                open_context_menu_owner.set(None);
+            }
+        });
+    });
 
     use_effect(move || {
         let app_state = app_state.clone();
@@ -114,7 +132,18 @@ pub fn app() -> Element {
             document::Link { rel: "preload", href: font, r#as: "font", r#type: "font/ttf", crossorigin: "anonymous" }
         }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
-        div { class: "dark min-h-screen bg-background text-foreground",
+        div {
+            class: "dark min-h-screen bg-background text-foreground",
+            onclick: move |_| open_context_menu_owner.set(None),
+            oncontextmenu: move |event| {
+                event.prevent_default();
+                open_context_menu_owner.set(None);
+            },
+            onkeydown: move |event| {
+                if event.key() == Key::Escape {
+                    open_context_menu_owner.set(None);
+                }
+            },
             Router::<Route> {}
             Toasts {}
             DownloadManager {}
