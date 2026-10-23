@@ -57,6 +57,31 @@ scoop install mpv ffmpeg yt-dlp # Windows
 choco install mpv ffmpeg yt-dlp # Windows alternative
 ```
 
+## Build from source
+
+Install Rust and Dioxus CLI 0.7.10:
+
+```sh
+cargo install dioxus-cli --version 0.7.10 --locked
+```
+
+On Debian or Ubuntu, install the desktop build dependencies:
+
+```sh
+sudo apt install -y pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev libxdo-dev \
+  libayatana-appindicator3-dev librsvg2-dev libssl-dev build-essential
+```
+
+Run the desktop app or create distributable bundles from `desktop/`:
+
+```sh
+cd desktop
+dx serve --platform desktop
+dx bundle --platform desktop --release
+```
+
+The desktop interface uses components adapted from [rust-ui/ui](https://github.com/rust-ui/ui), licensed under MIT.
+
 ## Docker
 You can install Fred TV using Docker. It wouldn't necessarily be the recommended way to install it, but it's now possible.
 You should always install Fred TV from either Releases or Flatpak on Linux.

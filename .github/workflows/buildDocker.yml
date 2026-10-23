@@ -38,5 +38,3 @@ jobs:
           tags: |
             ghcr.io/fredolx/open-tv:latest
             ghcr.io/fredolx/open-tv:${{ github.sha }}
-          build-args: |
-             pkgver=${{ github.sha }}
