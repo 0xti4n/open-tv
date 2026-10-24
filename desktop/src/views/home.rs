@@ -66,6 +66,8 @@ pub fn Home() -> Element {
     let mut sort = use_signal(|| 2_u8);
     let mut group_id = use_signal(|| None::<i64>);
     let mut series_id = use_signal(|| None::<i64>);
+    let mut saved_series_source_ids = use_signal(|| None::<Vec<i64>>);
+    let mut series_drill_pending = use_signal(|| false);
     let mut season = use_signal(|| None::<i64>);
     let mut page = use_signal(|| 1_u16);
     let channels = use_signal(Vec::<Channel>::new);
@@ -268,6 +270,9 @@ pub fn Home() -> Element {
                         _ => None,
                     };
                     if let Some(target_view) = target_view {
+                        if let Some(ids) = saved_series_source_ids.with_mut(|saved| saved.take()) {
+                            source_ids.set(ids);
+                        }
                         view.set(target_view);
                         page.set(1);
                         group_id.set(None);
@@ -337,6 +342,11 @@ pub fn Home() -> Element {
                         if season().is_some() {
                             season.set(None);
                         } else if series_id().is_some() {
+                            if let Some(ids) =
+                                saved_series_source_ids.with_mut(|saved| saved.take())
+                            {
+                                source_ids.set(ids);
+                            }
                             series_id.set(None);
                         } else {
                             group_id.set(None);
@@ -505,6 +515,11 @@ pub fn Home() -> Element {
                                 "rounded-md bg-secondary px-3 py-1.5 text-sm text-secondary-foreground hover:bg-accent"
                             },
                             onclick: move |_| {
+                                if let Some(ids) =
+                                    saved_series_source_ids.with_mut(|saved| saved.take())
+                                {
+                                    source_ids.set(ids);
+                                }
                                 view.set(value);
                                 page.set(1);
                                 group_id.set(None);
@@ -582,6 +597,11 @@ pub fn Home() -> Element {
                         if season().is_some() {
                             season.set(None);
                         } else if series_id().is_some() {
+                            if let Some(ids) =
+                                saved_series_source_ids.with_mut(|saved| saved.take())
+                            {
+                                source_ids.set(ids);
+                            }
                             series_id.set(None);
                         } else {
                             group_id.set(None);
@@ -629,21 +649,66 @@ pub fn Home() -> Element {
                             is_history: view() == view_type::HISTORY,
                             on_select: move |selected| selected_index.set(selected),
                             on_drill: move |channel: Channel| {
+                                if series_drill_pending() {
+                                    return;
+                                }
                                 match channel.media_type {
-                                    media_type::GROUP => group_id.set(channel.id.or(channel.group_id)),
+                                    media_type::GROUP => {
+                                        group_id.set(channel.id.or(channel.group_id));
+                                        page.set(1);
+                                    }
                                     media_type::SERIE => {
-                                        series_id.set(channel.series_id.map(|id| id as i64));
+                                        let parsed_series_id = channel
+                                            .url
+                                            .as_deref()
+                                            .and_then(|url| url.parse::<i64>().ok());
+                                        let source_id = channel.source_id;
                                         let episode_channel = channel.clone();
+                                        series_drill_pending.set(true);
+                                        let mut loading = loading;
+                                        let mut source_ids = source_ids;
+                                        let mut saved_series_source_ids =
+                                            saved_series_source_ids;
+                                        let mut series_id = series_id;
+                                        let mut page = page;
+                                        let mut selected_index = selected_index;
+                                        let mut series_drill_pending = series_drill_pending;
                                         spawn(async move {
-                                            if let Err(message) = nyx_tv_lib::get_episodes(episode_channel).await {
-                                                report_error(app, message);
+                                            loading.set(true);
+                                            match nyx_tv_lib::get_episodes(episode_channel).await {
+                                                Ok(()) => {
+                                                    if let (Some(parsed_series_id), Some(source_id)) =
+                                                        (parsed_series_id, source_id)
+                                                    {
+                                                        saved_series_source_ids
+                                                            .set(Some(source_ids()));
+                                                        source_ids.set(vec![source_id]);
+                                                        series_id.set(Some(parsed_series_id));
+                                                        page.set(1);
+                                                        selected_index.set(0);
+                                                    } else {
+                                                        report_error(
+                                                            app,
+                                                            "Unable to open series: missing series or source id"
+                                                                .to_string(),
+                                                        );
+                                                        loading.set(false);
+                                                    }
+                                                }
+                                                Err(message) => {
+                                                    report_error(app, message);
+                                                    loading.set(false);
+                                                }
                                             }
+                                            series_drill_pending.set(false);
                                         });
                                     }
-                                    media_type::SEASON => season.set(channel.season_id),
+                                    media_type::SEASON => {
+                                        season.set(channel.id);
+                                        page.set(1);
+                                    }
                                     _ => {}
                                 }
-                                page.set(1);
                             }
                         }
                     }
