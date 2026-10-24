@@ -1,5 +1,5 @@
 # Builder stage
-FROM debian:trixie-slim as builder
+FROM debian:trixie-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -14,18 +14,18 @@ RUN apt update && apt install -y \
   libayatana-appindicator3-dev \
   librsvg2-dev \
   libxdo-dev \
-  && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-  && apt install -y nodejs \
   && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+RUN cargo install dioxus-cli --version 0.7.10 --locked
 
 WORKDIR /app
 
 COPY . .
 
-RUN npm install
-RUN npm run tauri build -- --bundles deb
+WORKDIR /app/desktop
+RUN dx bundle --platform desktop --release --package-types deb
 
 # Runtime stage
 FROM debian:trixie-slim
@@ -35,15 +35,15 @@ ENV WEBKIT_DISABLE_DMABUF_RENDERER=1
 
 WORKDIR /tmp
 
-COPY --from=builder /app/src-tauri/target/release/bundle/deb/*.deb ./open-tv.deb
+COPY --from=builder /app/target/dx/nyx-tv/bundle/linux/deb/*.deb ./nyx-tv.deb
 
-RUN apt update && apt install -y ./open-tv.deb \
+RUN apt update && apt install -y ./nyx-tv.deb \
   mesa-utils \
   libgl1-mesa-dri \
   mpv \
   ffmpeg \
   yt-dlp \
   && apt clean && rm -rf /var/lib/apt/lists/* \
-  && rm open-tv.deb
+  && rm nyx-tv.deb
 
-CMD ["open_tv"]
+CMD ["nyx-tv"]

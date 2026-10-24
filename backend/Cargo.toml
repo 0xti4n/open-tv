@@ -1,0 +1,44 @@
+[package]
+name = "nyx_tv_lib"
+version = "1.9.1"
+description = "Fast And Powerful IPTV App"
+authors = ["0xti4n"]
+license = ""
+repository = ""
+edition = "2024"
+rust-version = "1.91.1"
+
+[dependencies]
+serde_json = "1.0.145"
+rusqlite = { version = "0.32.1", features = ["bundled"] }
+serde = { version = "1.0.228", features = ["derive"] }
+anyhow = "1.0.100"
+regex = { version = "1.12.2", features = ["std"] }
+directories = "6.0.0"
+reqwest = { version = "0.12.24", features = ["json"] }
+tokio = { version = "1.48.0", features = ["full"] }
+url = "2.5.7"
+r2d2_sqlite = "0.25.0"
+r2d2 = "0.8.10"
+bytes = "1.11.0"
+chrono = "0.4.42"
+which = "7.0.3"
+simplelog = "0.12.2"
+log = "0.4.28"
+rusqlite_migration = "1.3.1"
+base64 = "0.22.1"
+warp = "0.3.7"
+if-addrs = "0.13.4"
+tokio-util = "0.7.17"
+indexmap = "2.12.1"
+futures = "0.3.32"
+notify-rust = "4.11.3"
+
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+shell-words = "1.1.0"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winsplit = "0.1.0"
+
+[dev-dependencies]
+tempfile = "3.20.0"

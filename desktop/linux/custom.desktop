@@ -1,0 +1,10 @@
+[Desktop Entry]
+Categories={{categories}}
+Comment={{comment}}
+Exec=env WEBKIT_DISABLE_DMABUF_RENDERER=1 {{exec}}
+Icon={{icon}}
+Keywords=nyx;tv;iptv;
+Name=Nyx TV
+StartupWMClass=nyx-tv
+Terminal=false
+Type=Application

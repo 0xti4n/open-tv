@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>dev.nyxtv.nyx-tv</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0</project_license>
+  <name>Nyx TV</name>
+  <summary>Fast and powerful IPTV app</summary>
+  <content_rating type="oars-1.1" />
+  <branding>
+    <color type="primary" scheme_preference="light">#7a00d9</color>
+    <color type="primary" scheme_preference="dark">#7a00d9</color>
+  </branding>
+  <description>
+    <p>Nyx TV is an IPTV desktop application that plays video in mpv.</p>
+    <p>Features:</p>
+    <ul>
+      <li>Import channels from M3U files, M3U links, and Xtream sources</li>
+      <li>Record while watching</li>
+      <li>Manage multiple IPTV sources and favorites</li>
+      <li>Navigate with a TV remote or keyboard</li>
+      <li>Create and share custom channels</li>
+    </ul>
+  </description>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Video</category>
+  </categories>
+  <launchable type="desktop-id">dev.nyxtv.nyx-tv.desktop</launchable>
+  <releases>
+    <release version="1.9.1" date="2026-01-18">
+      <description>
+        <p>Rewritten in Rust with Dioxus. Video plays in mpv.</p>
+      </description>
+    </release>
+  </releases>
+  <developer_name>Nyx TV contributors</developer_name>
+  <url type="homepage">https://github.com/0xti4n/open-tv</url>
+  <url type="bugtracker">https://github.com/0xti4n/open-tv</url>
+  <url type="faq">https://github.com/0xti4n/open-tv</url>
+  <url type="help">https://github.com/0xti4n/open-tv</url>
+</component>
