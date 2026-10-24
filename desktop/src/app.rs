@@ -5,12 +5,12 @@ use nyx_tv_lib::types::AppState;
 use tokio::sync::Mutex;
 
 use crate::{
-    backend::{app_data_dir, blocking, report_error},
+    backend::{app_data_dir, blocking, notify, report_error},
     components::{
         download_manager::DownloadManager, modals::error_modal::ErrorModal,
         modals::whats_new_modal::WhatsNewModal, toasts::Toasts, tray::TrayIntegration,
     },
-    state::AppData,
+    state::{AppData, ToastKind},
     views::{home::Home, settings::Settings, setup::Setup},
 };
 
@@ -101,9 +101,15 @@ document.addEventListener("keydown", async event => {
                 .as_ref()
                 .is_some_and(|settings| settings.refresh_on_start == Some(true))
                 && !sources.is_empty()
-                && let Err(message) = nyx_tv_lib::refresh_all().await
             {
-                report_error(app_data, message);
+                match nyx_tv_lib::refresh_all().await {
+                    Ok(warnings) => {
+                        for warning in warnings {
+                            notify(app_data, ToastKind::Info, warning);
+                        }
+                    }
+                    Err(message) => report_error(app_data, message),
+                }
             }
             if !sources.is_empty()
                 && let Err(message) = nyx_tv_lib::on_start_check_epg(&app_state).await

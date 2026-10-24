@@ -462,7 +462,7 @@ pub fn search(filters: Filters) -> Result<Vec<Channel>> {
         return search_series(filters);
     }
     let sql = get_conn()?;
-    let offset: u16 = filters.page as u16 * PAGE_SIZE as u16 - PAGE_SIZE as u16;
+    let offset = i64::from(filters.page.saturating_sub(1)) * i64::from(PAGE_SIZE);
     let media_types = match filters.series_id.is_some() {
         true => vec![1],
         false => filters.media_types.clone().unwrap(),
@@ -542,7 +542,7 @@ pub fn search(filters: Filters) -> Result<Vec<Channel>> {
 
 fn search_series(filters: Filters) -> Result<Vec<Channel>> {
     let sql = get_conn()?;
-    let offset: u16 = filters.page as u16 * PAGE_SIZE as u16 - PAGE_SIZE as u16;
+    let offset = i64::from(filters.page.saturating_sub(1)) * i64::from(PAGE_SIZE);
     let query = filters.query.unwrap_or("".to_string());
     let keywords: Vec<String> = match filters.use_keywords {
         true => query
@@ -814,7 +814,7 @@ fn apply_bulk_channels(
 
 fn search_hidden(filters: Filters) -> Result<Vec<Channel>> {
     let sql = get_conn()?;
-    let offset: u16 = filters.page as u16 * PAGE_SIZE as u16 - PAGE_SIZE as u16;
+    let offset = i64::from(filters.page.saturating_sub(1)) * i64::from(PAGE_SIZE);
 
     let media_types = match filters.series_id.is_some() {
         true => vec![1],
@@ -926,7 +926,7 @@ fn to_sql_like(query: Option<String>) -> String {
 
 pub fn search_group(filters: Filters) -> Result<Vec<Channel>> {
     let sql = get_conn()?;
-    let offset: u16 = filters.page as u16 * PAGE_SIZE as u16 - PAGE_SIZE as u16;
+    let offset = i64::from(filters.page.saturating_sub(1)) * i64::from(PAGE_SIZE);
     let query = filters.query.unwrap_or("".to_string());
     let media_types = filters.media_types.context("no media types")?;
     let keywords: Vec<String> = match filters.use_keywords {

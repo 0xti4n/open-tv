@@ -124,16 +124,23 @@ pub fn Setup() -> Element {
             loading.set(true);
             error.set(None);
             let result = match source_kind {
-                0 => blocking(move || nyx_tv_lib::get_m3u8(source)).await,
-                1 => nyx_tv_lib::get_m3u8_from_link(source).await,
+                0 => blocking(move || nyx_tv_lib::get_m3u8(source))
+                    .await
+                    .map(|()| Vec::new()),
+                1 => nyx_tv_lib::get_m3u8_from_link(source)
+                    .await
+                    .map(|()| Vec::new()),
                 _ => nyx_tv_lib::get_xtream(source).await,
             };
             match result {
-                Ok(()) => match blocking(nyx_tv_lib::get_sources).await {
+                Ok(warnings) => match blocking(nyx_tv_lib::get_sources).await {
                     Ok(sources) => {
                         app.write().sources = sources;
                         app.write().loaded = true;
                         notify(app, ToastKind::Success, "Source added successfully");
+                        for warning in warnings {
+                            notify(app, ToastKind::Info, warning);
+                        }
                         navigator.replace(Route::Home {});
                     }
                     Err(message) => {

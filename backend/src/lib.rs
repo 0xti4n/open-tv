@@ -71,19 +71,19 @@ pub fn bulk_update(filters: Filters, action: u8) -> Result<(), String> {
     sql::bulk_update(filters, action).map_err(map_err_frontend)
 }
 
-pub async fn get_xtream(source: Source) -> Result<(), String> {
+pub async fn get_xtream(source: Source) -> Result<Vec<String>, String> {
     xtream::get_xtream(source, false)
         .await
         .map_err(map_err_frontend)
 }
 
-pub async fn refresh_source(source: Source) -> Result<(), String> {
+pub async fn refresh_source(source: Source) -> Result<Vec<String>, String> {
     utils::refresh_source(source)
         .await
         .map_err(map_err_frontend)
 }
 
-pub async fn refresh_all() -> Result<(), String> {
+pub async fn refresh_all() -> Result<Vec<String>, String> {
     utils::refresh_all().await.map_err(map_err_frontend)
 }
 

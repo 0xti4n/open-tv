@@ -23,6 +23,7 @@ use reqwest::Client;
 use rusqlite::Transaction;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use tokio::join;
 use url::Url;
@@ -56,13 +57,17 @@ pub fn normalize_xtream_url(url: &str) -> Result<String> {
 struct XtreamStream {
     #[serde(default)]
     stream_id: serde_json::Value,
+    #[serde(default)]
     name: Option<String>,
     #[serde(default)]
     category_id: serde_json::Value,
+    #[serde(default)]
     stream_icon: Option<String>,
     #[serde(default)]
     series_id: serde_json::Value,
+    #[serde(default)]
     cover: Option<String>,
+    #[serde(default)]
     container_extension: Option<String>,
     #[serde(default)]
     tv_archive: serde_json::Value,
@@ -105,7 +110,8 @@ struct XtreamEpisodeInfo {
 struct XtreamCategory {
     #[serde(default)]
     category_id: serde_json::Value,
-    category_name: String,
+    #[serde(default)]
+    category_name: Option<String>,
 }
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct XtreamEPG {
@@ -142,24 +148,20 @@ fn build_xtream_url(source: &mut Source) -> Result<Url> {
     Ok(url)
 }
 
-pub async fn get_xtream(mut source: Source, wipe: bool) -> Result<()> {
+pub async fn get_xtream(mut source: Source, wipe: bool) -> Result<Vec<String>> {
     let url = build_xtream_url(&mut source)?;
     let user_agent = get_user_agent_from_source(&source)?;
     let (live, live_cats, vods, vods_cats, series, series_cats) = join!(
-        get_xtream_http_data::<Vec<XtreamStream>>(url.clone(), GET_LIVE_STREAMS, &user_agent),
-        get_xtream_http_data::<Vec<XtreamCategory>>(
+        get_xtream_http_list::<XtreamStream>(url.clone(), GET_LIVE_STREAMS, &user_agent),
+        get_xtream_http_list::<XtreamCategory>(
             url.clone(),
             GET_LIVE_STREAM_CATEGORIES,
             &user_agent
         ),
-        get_xtream_http_data::<Vec<XtreamStream>>(url.clone(), GET_VODS, &user_agent),
-        get_xtream_http_data::<Vec<XtreamCategory>>(url.clone(), GET_VOD_CATEGORIES, &user_agent),
-        get_xtream_http_data::<Vec<XtreamStream>>(url.clone(), GET_SERIES, &user_agent),
-        get_xtream_http_data::<Vec<XtreamCategory>>(
-            url.clone(),
-            GET_SERIES_CATEGORIES,
-            &user_agent
-        ),
+        get_xtream_http_list::<XtreamStream>(url.clone(), GET_VODS, &user_agent),
+        get_xtream_http_list::<XtreamCategory>(url.clone(), GET_VOD_CATEGORIES, &user_agent),
+        get_xtream_http_list::<XtreamStream>(url.clone(), GET_SERIES, &user_agent),
+        get_xtream_http_list::<XtreamCategory>(url.clone(), GET_SERIES_CATEGORIES, &user_agent),
     );
     let mut sql = sql::get_conn()?;
     let tx = sql.transaction()?;
@@ -173,33 +175,40 @@ pub async fn get_xtream(mut source: Source, wipe: bool) -> Result<()> {
     }
     let mut fail_count = 0;
     let mut first_error = None;
-    live.and_then(|live| process_xtream(&tx, live, live_cats?, &source, media_type::LIVESTREAM))
-        .unwrap_or_else(|e| {
-            first_error.get_or_insert_with(|| format!("{e:#}"));
-            log::log(format!("{:?}", e.context("Failed to process live")));
-            fail_count += 1;
-        });
-    vods.and_then(|vods: Vec<XtreamStream>| {
-        process_xtream(&tx, vods, vods_cats?, &source, media_type::MOVIE)
-    })
-    .unwrap_or_else(|e| {
-        log::log(format!("{:?}", e.context("Failed to process vods")));
-        fail_count += 1;
-    });
-    series
-        .and_then(|series: Vec<XtreamStream>| {
-            process_xtream(&tx, series, series_cats?, &source, media_type::SERIE)
-        })
-        .unwrap_or_else(|e| {
-            log::log(format!("{:?}", e.context("Failed to process series")));
-            fail_count += 1;
-        });
+    let mut warnings = Vec::new();
+    {
+        let mut record_result = |section: &str, result: Result<usize>| match result {
+            Ok(skipped) if skipped > 0 => {
+                warnings.push(format!("{section}: skipped {skipped} invalid items"));
+            }
+            Ok(_) => {}
+            Err(error) => {
+                let error = format!("{error:#}");
+                first_error.get_or_insert_with(|| error.clone());
+                log::log(format!("Failed to process {section}: {error}"));
+                warnings.push(format!("{section}: failed to load ({error})"));
+                fail_count += 1;
+            }
+        };
+        record_result(
+            "Live",
+            process_xtream_section(&tx, live, live_cats, &source, media_type::LIVESTREAM),
+        );
+        record_result(
+            "Movies",
+            process_xtream_section(&tx, vods, vods_cats, &source, media_type::MOVIE),
+        );
+        record_result(
+            "Series",
+            process_xtream_section(&tx, series, series_cats, &source, media_type::SERIE),
+        );
+    }
     if fail_count > 2 {
         match tx.rollback() {
             Ok(_) => {}
             Err(e) => log::log(format!("Failed to rollback tx: {:?}", e)),
         }
-        let first_error = first_error.unwrap_or_else(|| "Unknown live request error".to_string());
+        let first_error = first_error.unwrap_or_else(|| "Unknown Xtream request error".to_string());
         return Err(anyhow!("Too many Xtream requests failed: {first_error}"));
     }
     if wipe {
@@ -207,7 +216,20 @@ pub async fn get_xtream(mut source: Source, wipe: bool) -> Result<()> {
     }
     sql::analyze(&tx)?;
     tx.commit()?;
-    Ok(())
+    Ok(warnings)
+}
+
+fn process_xtream_section(
+    tx: &Transaction,
+    streams: Result<(Vec<XtreamStream>, usize)>,
+    categories: Result<(Vec<XtreamCategory>, usize)>,
+    source: &Source,
+    stream_type: u8,
+) -> Result<usize> {
+    let (streams, skipped_streams) = streams?;
+    let (categories, skipped_categories) = categories?;
+    let skipped_processed = process_xtream(tx, streams, categories, source, stream_type)?;
+    Ok(skipped_streams + skipped_categories + skipped_processed)
 }
 
 async fn get_xtream_http_data<T>(mut url: Url, action: &str, user_agent: &String) -> Result<T>
@@ -229,38 +251,95 @@ where
     Ok(data)
 }
 
+async fn get_xtream_http_list<T: DeserializeOwned>(
+    url: Url,
+    action: &str,
+    user_agent: &String,
+) -> Result<(Vec<T>, usize)> {
+    let values = get_xtream_http_data::<Vec<serde_json::Value>>(url, action, user_agent).await?;
+    let (items, skipped, first_error) = parse_xtream_items(values);
+    if let Some(error) = first_error {
+        log::log(format!(
+            "Skipped {skipped} invalid items from Xtream action {action}: {error}"
+        ));
+    }
+    Ok((items, skipped))
+}
+
+fn parse_xtream_items<T: DeserializeOwned>(
+    values: Vec<serde_json::Value>,
+) -> (Vec<T>, usize, Option<String>) {
+    let mut items = Vec::with_capacity(values.len());
+    let mut skipped = 0;
+    let mut first_error = None;
+    for value in values {
+        match serde_json::from_value(value) {
+            Ok(item) => items.push(item),
+            Err(error) => {
+                skipped += 1;
+                first_error.get_or_insert_with(|| error.to_string());
+            }
+        }
+    }
+    (items, skipped, first_error)
+}
+
 fn process_xtream(
     tx: &Transaction,
     streams: Vec<XtreamStream>,
     cats: Vec<XtreamCategory>,
     source: &Source,
     stream_type: u8,
-) -> Result<()> {
+) -> Result<usize> {
+    let mut skipped = 0;
     let cats: HashMap<String, String> = cats
         .into_iter()
         .filter_map(|f| {
+            let category_name = match f.category_name {
+                Some(name) if !name.trim().is_empty() => name,
+                _ => {
+                    skipped += 1;
+                    return None;
+                }
+            };
+            let category_name = category_name.trim();
             let category_id = get_serde_json_string(&f.category_id);
-            category_id.map(|cid| (cid, f.category_name))
+            if category_id.is_none() {
+                skipped += 1;
+            }
+            category_id.map(|cid| (cid, category_name.to_string()))
         })
         .collect();
     let mut groups: HashMap<String, i64> = HashMap::new();
     for live in streams {
         let category_name = get_cat_name(&cats, get_serde_json_string(&live.category_id));
-        convert_xtream_live_to_channel(live, &source, stream_type.clone(), category_name)
-            .and_then(|mut channel| {
-                sql::set_channel_group_id(
+        let mut failed = false;
+        match convert_xtream_live_to_channel(live, source, stream_type, category_name) {
+            Ok(mut channel) => {
+                if let Err(error) = sql::set_channel_group_id(
                     &mut groups,
                     &mut channel,
-                    &tx,
+                    tx,
                     source.id.as_ref().unwrap(),
-                )
-                .unwrap_or_else(|e| log::log(format!("{:?}", e)));
-                sql::insert_channel(&tx, channel)?;
-                Ok(())
-            })
-            .unwrap_or_else(|e| log::log(format!("{:?}", e)));
+                ) {
+                    log::log(format!("{error:?}"));
+                    failed = true;
+                }
+                if let Err(error) = sql::insert_channel(tx, channel) {
+                    log::log(format!("{error:?}"));
+                    failed = true;
+                }
+            }
+            Err(error) => {
+                log::log(format!("{error:?}"));
+                failed = true;
+            }
+        }
+        if failed {
+            skipped += 1;
+        }
     }
-    Ok(())
+    Ok(skipped)
 }
 
 fn get_cat_name(cats: &HashMap<String, String>, category_id: Option<String>) -> Option<String> {
@@ -650,7 +729,7 @@ pub async fn get_all_expiries() -> Result<HashMap<i64, i64>> {
 
 #[cfg(test)]
 mod tests {
-    use super::normalize_xtream_url;
+    use super::{XtreamStream, normalize_xtream_url, parse_xtream_items};
 
     #[test]
     fn normalizes_xtream_urls() {
@@ -670,5 +749,18 @@ mod tests {
             normalize_xtream_url("http://host/custom/path").unwrap(),
             "http://host/custom/path"
         );
+    }
+
+    #[test]
+    fn skips_invalid_xtream_list_items() {
+        let values = serde_json::from_str(
+            r#"[{"stream_id":1,"name":"Valid","category_id":1},{"stream_id":2,"name":123}]"#,
+        )
+        .unwrap();
+        let (streams, skipped, first_error) = parse_xtream_items::<XtreamStream>(values);
+
+        assert_eq!(streams.len(), 1);
+        assert_eq!(skipped, 1);
+        assert!(first_error.is_some());
     }
 }

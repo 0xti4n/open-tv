@@ -265,7 +265,12 @@ pub fn Settings() -> Element {
                             spawn(async move {
                                 loading.set(true);
                                 match nyx_tv_lib::refresh_all().await {
-                                    Ok(()) => notify(app, ToastKind::Success, "Successfully updated all sources"),
+                                    Ok(warnings) => {
+                                        notify(app, ToastKind::Success, "Successfully updated all sources");
+                                        for warning in warnings {
+                                            notify(app, ToastKind::Info, warning);
+                                        }
+                                    }
                                     Err(message) => report_error(app, message),
                                 }
                                 match blocking(nyx_tv_lib::get_sources).await {

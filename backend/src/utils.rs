@@ -39,27 +39,34 @@ const DEFAULT_USER_AGENT: &str = "Nyx TV";
 static ILLEGAL_CHARS_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"[<>:"/\\|?*\x00-\x1F]"#).unwrap());
 
-pub async fn refresh_source(source: Source) -> Result<()> {
+pub async fn refresh_source(source: Source) -> Result<Vec<String>> {
     let id = source.id;
-    match source.source_type {
-        source_type::M3U => m3u::read_m3u8(source, true)?,
-        source_type::M3U_LINK => m3u::get_m3u8_from_link(source, true).await?,
+    let warnings = match source.source_type {
+        source_type::M3U => {
+            m3u::read_m3u8(source, true)?;
+            Vec::new()
+        }
+        source_type::M3U_LINK => {
+            m3u::get_m3u8_from_link(source, true).await?;
+            Vec::new()
+        }
         source_type::XTREAM => xtream::get_xtream(source, true).await?,
-        source_type::CUSTOM => {}
+        source_type::CUSTOM => Vec::new(),
         _ => return Err(anyhow!("invalid source_type")),
-    }
+    };
     if let Some(id) = id {
         sql::update_source_last_updated(id)?;
     }
-    Ok(())
+    Ok(warnings)
 }
 
-pub async fn refresh_all() -> Result<()> {
+pub async fn refresh_all() -> Result<Vec<String>> {
     let sources = sql::get_sources()?;
+    let mut warnings = Vec::new();
     for source in sources {
-        refresh_source(source).await?;
+        warnings.extend(refresh_source(source).await?);
     }
-    Ok(())
+    Ok(warnings)
 }
 
 pub fn get_local_time(timestamp: i64) -> Result<DateTime<Local>> {

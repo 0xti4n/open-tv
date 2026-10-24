@@ -67,7 +67,7 @@ pub fn Home() -> Element {
     let mut group_id = use_signal(|| None::<i64>);
     let mut series_id = use_signal(|| None::<i64>);
     let mut season = use_signal(|| None::<i64>);
-    let mut page = use_signal(|| 1_u8);
+    let mut page = use_signal(|| 1_u16);
     let channels = use_signal(Vec::<Channel>::new);
     let loading = use_signal(|| false);
     let has_more = use_signal(|| true);
@@ -77,7 +77,7 @@ pub fn Home() -> Element {
     let mut sort_menu = use_signal(|| false);
     let mut request_number = use_signal(|| 0_u64);
     let mut refresh_number = use_signal(|| 0_u64);
-    let last_loaded_page = use_signal(|| 0_u8);
+    let last_loaded_page = use_signal(|| 0_u16);
     let last_loaded_request = use_signal(|| None::<(Filters, u64)>);
 
     use_effect(move || {
@@ -397,8 +397,13 @@ pub fn Home() -> Element {
                             let mut app = app;
                             spawn(async move {
                                 loading.set(true);
-                                if let Err(message) = nyx_tv_lib::refresh_all().await {
-                                    report_error(app, message);
+                                match nyx_tv_lib::refresh_all().await {
+                                    Ok(warnings) => {
+                                        for warning in warnings {
+                                            notify(app, ToastKind::Info, warning);
+                                        }
+                                    }
+                                    Err(message) => report_error(app, message),
                                 }
                                 match blocking(nyx_tv_lib::get_sources).await {
                                     Ok(sources) => app.write().sources = sources,

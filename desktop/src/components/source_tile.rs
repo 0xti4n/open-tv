@@ -220,7 +220,12 @@ pub fn SourceTile(source: Source, expiry: Option<i64>) -> Element {
                                 loading.set(true);
                                 spawn(async move {
                                     match nyx_tv_lib::refresh_source(source).await {
-                                        Ok(()) => notify(app, ToastKind::Success, "Successfully updated source"),
+                                        Ok(warnings) => {
+                                            notify(app, ToastKind::Success, "Successfully updated source");
+                                            for warning in warnings {
+                                                notify(app, ToastKind::Info, warning);
+                                            }
+                                        }
                                         Err(message) => report_error(app, message),
                                     }
                                     loading.set(false);

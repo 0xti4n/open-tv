@@ -160,7 +160,7 @@ pub fn ChannelTile(
                 }
             }
             div { class: "p-3",
-                h2 { class: "truncate text-sm font-medium", title: "{name}", "{name}" }
+                h2 { class: "line-clamp-2 break-words min-h-10 text-sm font-medium", title: "{name}", "{name}" }
                 p { class: "mt-1 truncate text-xs text-muted-foreground", "{source_name.as_deref().or(channel.group.as_deref()).unwrap_or(\"Live TV\")}" }
             }
             if open_context_menu_owner() == Some(menu_id) {
